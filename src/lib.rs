@@ -9,6 +9,8 @@ mod address;
 pub mod modec;
 pub mod modet;
 pub mod stack;
+#[cfg(feature = "ctrl")]
+pub mod ctrl;
 
 #[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
 #[repr(u16)]

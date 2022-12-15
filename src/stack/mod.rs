@@ -20,7 +20,7 @@ pub trait Layer {
 
 /// A Wireless M-Bus packet
 pub struct Packet {
-    pub frame_format: FrameFormat,
+    pub channel: Channel,
     pub uptime: Option<Duration>,
     pub phl: Option<phl::PhlFields>,
     pub dll: Option<dll::DllFields>,
@@ -34,10 +34,18 @@ pub enum FrameFormat {
     FFB,
 }
 
+#[derive(Clone, Copy)]
+pub enum Channel {
+    /// Mode C.
+    ModeC(FrameFormat),
+    /// Mode T. Frame is "three out of six" encoded and uses frame format A.
+    ModeT,
+}
+
 impl Packet {
-    pub const fn new(frame_format: FrameFormat) -> Self {
+    pub const fn new(channel: Channel) -> Self {
         Self {
-            frame_format,
+            channel,
             uptime: None,
             phl: None,
             dll: None,
@@ -50,6 +58,8 @@ impl Packet {
 #[derive(Debug, PartialEq)]
 pub enum ReadError {
     NotEnoughBytes,
+    PhlInvalidSyncword,
+    PhlInvalidThreeOutOfSix,
     PhlInvalidLength,
     PhlCrcError(usize),
     BcdConversionError,
@@ -79,8 +89,8 @@ impl Stack<apl::Apl> {
 
 impl<A: Layer> Stack<A> {
     /// Read a packet from a byte buffer
-    pub fn read(&self, buffer: &[u8], frame_format: FrameFormat) -> Result<Packet, ReadError> {
-        let mut packet = Packet::new(frame_format);
+    pub fn read(&self, buffer: &[u8], channel: Channel) -> Result<Packet, ReadError> {
+        let mut packet = Packet::new(channel);
         self.phl.read(&mut packet, buffer)?;
         Ok(packet)
     }

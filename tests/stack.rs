@@ -1,6 +1,6 @@
 use assert_hex::assert_eq_hex;
 use wmbus::{
-    stack::{phl, FrameFormat, Stack},
+    stack::{phl, FrameFormat, Stack, Channel},
     DeviceType, ManufacturerCode,
 };
 
@@ -19,7 +19,7 @@ fn can_read_ffa() {
     ];
 
     // When
-    let packet = stack.read(frame, FrameFormat::FFA).unwrap();
+    let packet = stack.read(frame, Channel::ModeC(FrameFormat::FFA)).unwrap();
 
     // Then
     assert_eq!(frame.len(), phl::ffa::get_frame_length(frame).unwrap());
@@ -51,7 +51,7 @@ fn can_read_ffb() {
     ];
 
     // When
-    let packet = stack.read(frame, FrameFormat::FFB).unwrap();
+    let packet = stack.read(frame, Channel::ModeC(FrameFormat::FFB)).unwrap();
 
     // Then
     assert_eq!(frame.len(), phl::ffb::get_frame_length(frame).unwrap());
