@@ -2,7 +2,10 @@ pub mod ffa;
 pub mod ffb;
 
 use alloc::vec::Vec;
+use bitvec::prelude::*;
 use crc::{Crc, CRC_16_EN_13757};
+
+use crate::modet::ThreeOutOfSix;
 
 use super::{Channel, FrameFormat, Layer, Packet, ReadError};
 
@@ -39,9 +42,12 @@ pub fn get_frame_length(buffer: &[u8]) -> Result<(Channel, usize), ReadError> {
         }
     } else {
         // TODO: Three out of six decode
-        todo!()
-        // let frame_length = ffa::get_frame_length(buffer)?;
-        // Ok((Channel::ModeT, frame_length))
+        let bits = buffer.view_bits();
+        let buffer =
+            ThreeOutOfSix::decode(&bits[..12]).map_err(|_| ReadError::PhlInvalidThreeOutOfSix)?;
+        assert_eq!(1, buffer.len());
+        let frame_length = ffa::get_frame_length(&buffer)?;
+        Ok((Channel::ModeT, frame_length))
     }
 }
 
@@ -54,7 +60,15 @@ impl<A: Layer> Phl<A> {
 impl<A: Layer> Layer for Phl<A> {
     fn read(&self, packet: &mut Packet, buffer: &[u8]) -> Result<(), ReadError> {
         let payload = match packet.channel {
-            Channel::ModeT => ffa::read(buffer)?,
+            Channel::ModeT => {
+                let mut symbols = (buffer.len() * 8) / 6;
+                symbols &= !1; // The number of symbols must be even
+                let buffer_bits = buffer.view_bits::<Msb0>();
+                let encoded = &buffer_bits[..6 * symbols];
+                let decoded = ThreeOutOfSix::decode(encoded)
+                    .map_err(|_| ReadError::PhlInvalidThreeOutOfSix)?;
+                ffa::read(&decoded)?
+            }
             Channel::ModeC(FrameFormat::FFA) => ffa::read(buffer)?,
             Channel::ModeC(FrameFormat::FFB) => ffb::read(buffer)?,
         };
