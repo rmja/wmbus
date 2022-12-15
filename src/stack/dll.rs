@@ -35,7 +35,7 @@ impl<A: Layer> Layer for Dll<A> {
         self.above.read(packet, &buffer[HEADER_LENGTH..])
     }
 
-    fn write(&self, writer: &mut Vec<u8>, packet: &super::Packet) {
+    fn write(&self, _writer: &mut Vec<u8>, _packet: &super::Packet) {
         todo!()
     }
 }

@@ -30,7 +30,7 @@ impl<A: Layer> Layer for Phl<A> {
         self.above.read(packet, &payload)
     }
 
-    fn write(&self, writer: &mut Vec<u8>, packet: &super::Packet) {
+    fn write(&self, _writer: &mut Vec<u8>, _packet: &super::Packet) {
         todo!()
     }
 }

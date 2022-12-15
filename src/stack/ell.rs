@@ -92,7 +92,7 @@ impl<A: Layer> Layer for Ell<A> {
         self.above.read(packet, &buffer[offset..])
     }
 
-    fn write(&self, writer: &mut Vec<u8>, packet: &Packet) {
+    fn write(&self, _writer: &mut Vec<u8>, _packet: &Packet) {
         todo!()
     }
 }
