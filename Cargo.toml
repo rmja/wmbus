@@ -1,0 +1,24 @@
+[package]
+name = "wmbus"
+version = "0.1.0"
+edition = "2021"
+authors = ["Rasmus Melchior Jacobsen <rmja@laesoe.org>"]
+repository = "https://github.com/rmja/wmbus"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = [
+    "en13757",
+    "wmbus",
+]
+description = """
+Wireless M-Bus (EN13757) protocol.
+"""
+
+[dependencies]
+bcd-numbers = { git = "https://github.com/rmja/bcd-numbers", branch = "dev" }
+crc = "2.0"
+num-derive = "0.3"
+num-traits = { version = "0.2", default-features = false }
+
+[dev-dependencies]
+assert_hex = "0.2"
