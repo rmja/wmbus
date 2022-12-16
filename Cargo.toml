@@ -22,7 +22,7 @@ all = ["ctrl"]
 [dependencies]
 async-stream = { version = "0.3", optional = true }
 async-trait = { version = "0.1", optional = true }
-bcd-numbers = { git = "https://github.com/rmja/bcd-numbers", branch = "dev" }
+bcd = { git = "https://github.com/rmja/bcd" }
 bitvec = { version = "1", default-features = false, features = ["alloc"] }
 crc = "2.0"
 futures = { version = "0.3.0", default-features = false, optional = true }

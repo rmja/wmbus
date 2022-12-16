@@ -1,13 +1,13 @@
 use core::{convert::TryInto, fmt::Display};
 
-use bcd_numbers::{BCDConversionError, BCD};
+use bcd::{BcdNumber, BcdError};
 
 use crate::{DeviceType, ManufacturerCode};
 
 #[derive(PartialEq)]
 pub struct WMBusAddress {
     manufacturer_code: u16,
-    serial_number: BCD<4>,
+    serial_number: BcdNumber<4>,
     version: u8,
     device_type: u8,
 }
@@ -41,7 +41,7 @@ impl WMBusAddress {
     ) -> Self {
         Self {
             manufacturer_code: manufacturer_code as u16,
-            serial_number: BCD::new(serial_number as u128),
+            serial_number: BcdNumber::from_u32(serial_number),
             version,
             device_type: device_type as u8,
         }
@@ -72,7 +72,7 @@ impl WMBusAddress {
     }
 
     pub fn serial_number(&self) -> u32 {
-        self.serial_number.get_number() as u32
+        self.serial_number.value()
     }
 
     pub fn version(&self) -> u8 {
@@ -102,7 +102,7 @@ fn get_layout(value: &[u8; 8]) -> FieldLayout {
         if (device_type == 0x04 || device_type == 0x0C) && version == 0x20 {
             // Sharky 775
             if let Ok(serial_number) = parse_bcd_le(value[4..8].try_into().unwrap()) {
-                let serial_number = serial_number.get_number();
+                let serial_number: u32 = serial_number.value();
                 if (serial_number >= 44000000 && serial_number < 48350000)
                     || (serial_number >= 51200000 && serial_number < 51273000)
                 {
@@ -125,11 +125,11 @@ fn get_layout(value: &[u8; 8]) -> FieldLayout {
     FieldLayout::Default
 }
 
-fn parse_bcd_le(bytes_le: &[u8; 4]) -> Result<BCD<4>, BCDConversionError> {
+fn parse_bcd_le(bytes_le: &[u8; 4]) -> Result<BcdNumber<4>, BcdError> {
     let mut bytes_be = [0; 4];
     bytes_be.copy_from_slice(bytes_le);
     bytes_be.reverse();
-    BCD::<4>::try_from(bytes_be)
+    BcdNumber::<4>::try_from(bytes_be)
 }
 
 #[cfg(test)]
@@ -141,7 +141,7 @@ pub mod tests {
         let address =
             WMBusAddress::from_bytes([0x2D, 0x2C, 0x78, 0x56, 0x34, 0x12, 0x01, 0x32]).unwrap();
         assert_eq!(ManufacturerCode::KAM, address.manufacturer_code().unwrap());
-        assert_eq!(12345678, address.serial_number.get_number());
+        assert_eq!(12345678, address.serial_number.value());
         assert_eq!(0x01, address.version);
         assert_eq!(DeviceType::Repeater, address.device_type().unwrap());
     }
@@ -151,35 +151,35 @@ pub mod tests {
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x95, 0x27, 0x80, 0x49, 0x20, 0x0C]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(49802795, address.serial_number.get_number());
+        assert_eq!(49802795, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x59, 0x91, 0x95, 0x49, 0x20, 0x04]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(49959159, address.serial_number.get_number());
+        assert_eq!(49959159, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x06, 0x34, 0x27, 0x51, 0x20, 0x04]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(51273406, address.serial_number.get_number());
+        assert_eq!(51273406, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x02, 0x84, 0x84, 0x51, 0x20, 0x04]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(51848402, address.serial_number.get_number());
+        assert_eq!(51848402, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x83, 0x70, 0x29, 0x53, 0x20, 0x04]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(53297083, address.serial_number.get_number());
+        assert_eq!(53297083, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
     }
@@ -189,35 +189,35 @@ pub mod tests {
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x04, 0x69, 0x02, 0x71, 0x47]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(47710269, address.serial_number.get_number());
+        assert_eq!(47710269, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x0C, 0x18, 0x59, 0x78, 0x47]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(47785918, address.serial_number.get_number());
+        assert_eq!(47785918, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x53, 0x0C, 0x95, 0x26, 0x86, 0x47]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(47862695, address.serial_number.get_number());
+        assert_eq!(47862695, address.serial_number.value());
         assert_eq!(0x53, address.version);
         assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x0C, 0x61, 0x04, 0x34, 0x48]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(48340461, address.serial_number.get_number());
+        assert_eq!(48340461, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x04, 0x02, 0x29, 0x27, 0x51]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(51272902, address.serial_number.get_number());
+        assert_eq!(51272902, address.serial_number.value());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
     }
