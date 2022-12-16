@@ -15,7 +15,7 @@ Wireless M-Bus (EN13757) protocol.
 """
 
 [features]
-default = ["ctrl"]
+default = []
 ctrl = ["async-stream", "async-trait", "futures"]
 all = ["ctrl"]
 
