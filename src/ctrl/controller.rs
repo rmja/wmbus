@@ -1,8 +1,7 @@
-use core::time::Duration;
-
 use crate::stack::{phl, Channel, ReadError};
-use async_stream::stream;
+use alloc::boxed::Box;
 use futures::Stream;
+use futures_async_stream::stream;
 
 use super::{traits, Rssi, TransceiverError};
 
@@ -12,8 +11,8 @@ pub struct Controller<Transceiver: traits::Transceiver> {
     receiving: bool,
 }
 
-pub struct Frame {
-    pub timestamp: Duration,
+pub struct Frame<Timestamp: Send> {
+    pub timestamp: Timestamp,
     pub rssi: Rssi,
     buffer: [u8; phl::MAX_FRAME_LENGTH],
     received: usize,
@@ -21,8 +20,8 @@ pub struct Frame {
     length: Option<usize>,
 }
 
-impl Frame {
-    const fn new(timestamp: Duration, rssi: Rssi) -> Self {
+impl<Timestamp: Send> Frame<Timestamp> {
+    const fn new(timestamp: Timestamp, rssi: Rssi) -> Self {
         Self {
             timestamp,
             rssi,
@@ -62,52 +61,55 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
 
     /// Start and run receiver.
     /// Note that the receiver is _not_ stopped when the stream is dropped, so idle() must be called manually after the stream is dropped.
-    pub async fn receive<'a>(&'a mut self) -> impl Stream<Item = Frame> + 'a {
+    pub async fn receive<'a>(
+        &'a mut self,
+    ) -> impl Stream<Item = Frame<Transceiver::Timestamp>> + Send + 'a {
+        self.receive_stream()
+    }
+
+    #[stream(boxed, item = Frame<Transceiver::Timestamp>)]
+    async fn receive_stream(&mut self) {
         assert!(!self.receiving);
         self.receiving = true;
 
-        stream! {
+        loop {
+            let (timestamp, rssi) = self.transceiver.receive().await;
+            let mut frame = Frame::new(timestamp, rssi);
+
+            // Frame was detected - read all frame bytes...
             loop {
-                let (timestamp, rssi) = self.transceiver.receive().await;
-                let mut frame = Frame::new(timestamp, rssi);
+                let mut buffer = &mut frame.buffer[frame.received..];
+                let received = self.transceiver.read(&mut buffer, frame.length).await;
 
-                // Frame was detected - read all frame bytes...
-                loop {
-                    let mut buffer = &mut frame.buffer[frame.received..];
-                    let received = self.transceiver.read(&mut buffer, frame.length).await;
+                if let Ok(received) = received {
+                    frame.received += received;
 
-                    if let Ok(received) = received {
-                        frame.received += received;
-
-                        if let Some(framelen) = frame.length {
-                            if frame.received >= framelen {
-                                yield frame;
+                    if let Some(framelen) = frame.length {
+                        if frame.received >= framelen {
+                            yield frame;
+                            break;
+                        }
+                    } else {
+                        // Try and derive the frame length
+                        match phl::get_frame_length(&frame.buffer[..frame.received]) {
+                            Ok((channel, length)) => {
+                                frame.channel = Some(channel);
+                                frame.length = Some(length);
+                            }
+                            Err(ReadError::NotEnoughBytes) => {
+                                continue;
+                            }
+                            Err(_) => {
+                                // Invalid frame length - restart receive
+                                self.transceiver.idle().await;
                                 break;
                             }
                         }
-                        else {
-                            // Try and derive the frame length
-                            match phl::get_frame_length(&frame.buffer[..frame.received]) {
-                                Ok((channel, length)) =>  {
-                                    frame.channel = Some(channel);
-                                    frame.length = Some(length);
-                                },
-                                Err(ReadError::NotEnoughBytes) => {
-                                    continue;
-                                }
-                                Err(_) => {
-                                    // Invalid frame length - restart receive
-                                    self.transceiver.idle().await;
-                                    break;
-                                }
-                            }
-                        }
                     }
-                    else {
-                        // Error during read - restart receive
-                        self.transceiver.idle().await;
-                        break;
-                    }
+                } else {
+                    // Error during read - restart receive
+                    self.transceiver.idle().await;
+                    break;
                 }
             }
         }

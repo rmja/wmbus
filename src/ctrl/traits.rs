@@ -1,4 +1,3 @@
-use core::time::Duration;
 use alloc::boxed::Box;
 
 use async_trait::async_trait;
@@ -7,9 +6,11 @@ use mockall::automock;
 
 use super::{Rssi, TransceiverError};
 
-#[cfg_attr(test, automock)]
+#[cfg_attr(test, automock(type Timestamp = core::time::Duration;))]
 #[async_trait]
-pub trait Transceiver {
+pub trait Transceiver : Send {
+    type Timestamp: Send;
+
     /// Setup the transceiver and enter idle state.
     async fn init(&mut self) -> Result<(), TransceiverError>;
 
@@ -21,7 +22,7 @@ pub trait Transceiver {
 
     /// Start receiver and try and receive a packet.
     /// The future will complete when a packet is detected.
-    async fn receive(&mut self) -> (Duration, Rssi);
+    async fn receive(&mut self) -> (Self::Timestamp, Rssi);
 
     /// Read bytes for the packet currently being received.
     async fn read<'a>(
