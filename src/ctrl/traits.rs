@@ -5,7 +5,7 @@ use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
 
-use super::Rssi;
+use super::{Rssi, TransceiverError};
 
 #[cfg_attr(test, automock)]
 #[async_trait]
@@ -32,11 +32,4 @@ pub trait Transceiver {
 
     /// Enter idle state.
     async fn idle(&mut self);
-}
-
-#[derive(Debug)]
-pub enum TransceiverError {
-    /// The transceiver was not found to be present
-    NotPresent,
-    Timeout,
 }

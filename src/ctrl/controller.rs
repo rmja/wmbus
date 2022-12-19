@@ -1,14 +1,14 @@
 use core::time::Duration;
 
+use crate::stack::{phl, Channel, ReadError};
 use async_stream::stream;
 use futures::Stream;
-use crate::stack::{phl, Channel, ReadError};
 
-use super::{adapters::{Transceiver, TransceiverError}, Rssi};
+use super::{traits, Rssi, TransceiverError};
 
 /// Wireless M-Bus Transceiver Controller
-pub struct Controller<T: Transceiver> {
-    transceiver: T,
+pub struct Controller<Transceiver: traits::Transceiver> {
+    transceiver: Transceiver,
     receiving: bool,
 }
 
@@ -38,9 +38,9 @@ impl Frame {
     }
 }
 
-impl<T: Transceiver> Controller<T> {
+impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     /// Create a new controller
-    pub const fn new(transceiver: T) -> Self {
+    pub const fn new(transceiver: Transceiver) -> Self {
         Self {
             transceiver,
             receiving: false,
@@ -120,7 +120,7 @@ impl<T: Transceiver> Controller<T> {
     }
 
     /// Release the transceiver
-    pub fn release(self) -> T {
+    pub fn release(self) -> Transceiver {
         self.transceiver
     }
 }
