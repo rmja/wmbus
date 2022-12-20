@@ -3,7 +3,7 @@ use alloc::boxed::Box;
 use futures::Stream;
 use futures_async_stream::stream;
 
-use super::{traits, Rssi, TransceiverError};
+use super::{traits, Rssi};
 
 /// Wireless M-Bus Transceiver Controller
 pub struct Controller<Transceiver: traits::Transceiver> {
@@ -54,7 +54,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
 
     /// Transmit pre-written bytes.
     /// The transmitter enters idle after the transmission completes.
-    pub async fn transmit(&mut self) -> Result<(), TransceiverError> {
+    pub async fn transmit(&mut self) -> Result<(), Transceiver::Error> {
         assert!(!self.receiving);
         self.transceiver.transmit().await
     }
