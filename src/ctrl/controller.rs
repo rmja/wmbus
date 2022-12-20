@@ -11,7 +11,7 @@ pub struct Controller<Transceiver: traits::Transceiver> {
     receiving: bool,
 }
 
-pub struct Frame<Timestamp: Send> {
+pub struct Frame<Timestamp> {
     pub timestamp: Timestamp,
     pub rssi: Rssi,
     buffer: [u8; phl::MAX_FRAME_LENGTH],
@@ -20,7 +20,7 @@ pub struct Frame<Timestamp: Send> {
     length: Option<usize>,
 }
 
-impl<Timestamp: Send> Frame<Timestamp> {
+impl<Timestamp> Frame<Timestamp> {
     const fn new(timestamp: Timestamp, rssi: Rssi) -> Self {
         Self {
             timestamp,
@@ -63,11 +63,11 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     /// Note that the receiver is _not_ stopped when the stream is dropped, so idle() must be called manually after the stream is dropped.
     pub async fn receive<'a>(
         &'a mut self,
-    ) -> impl Stream<Item = Frame<Transceiver::Timestamp>> + Send + 'a {
+    ) -> impl Stream<Item = Frame<Transceiver::Timestamp>> + 'a {
         self.receive_stream()
     }
 
-    #[stream(boxed, item = Frame<Transceiver::Timestamp>)]
+    #[stream(boxed_local, item = Frame<Transceiver::Timestamp>)]
     async fn receive_stream(&mut self) {
         assert!(!self.receiving);
         self.receiving = true;

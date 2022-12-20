@@ -1,6 +1,6 @@
 use core::{convert::TryInto, fmt::Display};
 
-use bcd::{BcdNumber, BcdError};
+use bcd::{BcdError, BcdNumber};
 
 use crate::{DeviceType, ManufacturerCode};
 

@@ -1,15 +1,11 @@
-use alloc::boxed::Box;
-
-use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
 
 use super::{Rssi, TransceiverError};
 
 #[cfg_attr(test, automock(type Timestamp = core::time::Duration;))]
-#[async_trait]
-pub trait Transceiver : Send {
-    type Timestamp: Send;
+pub trait Transceiver {
+    type Timestamp;
 
     /// Setup the transceiver and enter idle state.
     async fn init(&mut self) -> Result<(), TransceiverError>;

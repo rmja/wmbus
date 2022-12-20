@@ -1,5 +1,5 @@
-pub mod traits;
 mod controller;
+pub mod traits;
 
 pub type Rssi = i8;
 

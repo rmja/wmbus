@@ -6,21 +6,15 @@ authors = ["Rasmus Melchior Jacobsen <rmja@laesoe.org>"]
 repository = "https://github.com/rmja/wmbus"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
-keywords = [
-    "en13757",
-    "wmbus",
-]
-description = """
-Wireless M-Bus (EN13757) protocol.
-"""
+keywords = ["en13757", "oms", "wmbus"]
+description = "Wireless M-Bus (EN13757) protocol"
 
 [features]
 default = []
-ctrl = ["async-trait", "futures", "futures-async-stream"]
+ctrl = ["futures", "futures-async-stream"]
 all = ["ctrl"]
 
 [dependencies]
-async-trait = { version = "0.1", optional = true }
 bcd = { git = "https://github.com/rmja/bcd" }
 bitvec = { version = "1", default-features = false, features = ["alloc"] }
 crc = "2.0"

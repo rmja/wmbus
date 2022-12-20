@@ -1,5 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(generators)]
+#![allow(incomplete_features)]
+#![feature(async_fn_in_trait)]
 
 extern crate alloc;
 
@@ -7,11 +9,11 @@ extern crate alloc;
 extern crate num_derive;
 
 mod address;
+#[cfg(feature = "ctrl")]
+pub mod ctrl;
 pub mod modec;
 pub mod modet;
 pub mod stack;
-#[cfg(feature = "ctrl")]
-pub mod ctrl;
 
 #[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
 #[repr(u16)]
