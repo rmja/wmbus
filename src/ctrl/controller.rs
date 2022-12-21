@@ -45,6 +45,13 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
             receiving: false,
         }
     }
+
+    /// Setup the transceiver and enter idle state.
+    pub async fn init(&mut self) -> Result<(), Transceiver::Error> {
+        self.receiving = false;
+        self.transceiver.init().await
+    }
+
     /// Prepare bytes for transmission.
     /// All bytes for the transmission must be written before the transmission is started.
     pub async fn write(&mut self, buffer: &[u8]) {
