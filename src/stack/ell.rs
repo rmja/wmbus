@@ -52,7 +52,7 @@ impl EllFields {
 impl<A: Layer> Layer for Ell<A> {
     fn read(&self, packet: &mut Packet, buffer: &[u8]) -> Result<(), ReadError> {
         let mut offset = 0;
-        if buffer.len() >= 1 {
+        if !buffer.is_empty() {
             if let Some(header_length) = header_length(buffer[0]) {
                 if buffer.len() < header_length {
                     return Err(ReadError::NotEnoughBytes);

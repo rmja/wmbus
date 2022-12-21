@@ -10,7 +10,7 @@ const MIN_FRAME_LENGTH: usize = MIN_DATA_LENGTH + 2;
 pub const MAX_FRAME_LENGTH: usize = 256;
 
 pub const fn get_frame_length(buffer: &[u8]) -> Result<usize, ReadError> {
-    if buffer.len() == 0 {
+    if buffer.is_empty() {
         return Err(ReadError::NotEnoughBytes);
     }
 

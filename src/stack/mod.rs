@@ -78,6 +78,12 @@ impl Stack<ell::Ell<apl::Apl>> {
     }
 }
 
+impl Default for Stack<ell::Ell<apl::Apl>> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Stack<apl::Apl> {
     /// Create a new Wireless M-Bus stack without extended link layer
     pub fn without_ell() -> Self {

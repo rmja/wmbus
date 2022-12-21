@@ -7,11 +7,11 @@ pub const CHIPRATE: u32 = 100_000; // kcps
 pub struct ThreeOutOfSix;
 
 // Table 10 in EN13757-4
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 const ENCODE_TABLE: [u8; 0x10] = [
     22, 13, 14, 11, 28, 25, 26, 19, 44, 37, 38, 35, 52, 49, 50, 41,
 ];
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 const DECODE_TABLE: [i8; 0x40] = [
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  3, -1,  1,  2, -1,
     -1, -1, -1,  7, -1, -1,  0, -1, -1,  5,  6, -1,  4, -1, -1, -1,
@@ -46,7 +46,7 @@ impl ThreeOutOfSix {
 
     pub fn decode<T: BitStore>(input: &BitSlice<T, Msb0>) -> Result<Vec<u8>, ThreeOutOfSixError> {
         let symbols = input.chunks_exact(6);
-        if symbols.remainder().len() != 0 || symbols.len() & 1 != 0 {
+        if !symbols.remainder().is_empty() || symbols.len() & 1 != 0 {
             return Err(ThreeOutOfSixError::InvalidInputLength);
         }
 
