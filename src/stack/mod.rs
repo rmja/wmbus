@@ -3,8 +3,6 @@ pub mod dll;
 pub mod ell;
 pub mod phl;
 
-use core::time::Duration;
-
 use alloc::vec::Vec;
 
 /// The Wireless M-Bus protocol stack
@@ -21,7 +19,6 @@ pub trait Layer {
 /// A Wireless M-Bus packet
 pub struct Packet {
     pub channel: Channel,
-    pub uptime: Option<Duration>,
     pub phl: Option<phl::PhlFields>,
     pub dll: Option<dll::DllFields>,
     pub ell: Option<ell::EllFields>,
@@ -46,7 +43,6 @@ impl Packet {
     pub const fn new(channel: Channel) -> Self {
         Self {
             channel,
-            uptime: None,
             phl: None,
             dll: None,
             ell: None,

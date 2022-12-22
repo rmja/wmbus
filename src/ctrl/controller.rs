@@ -35,6 +35,10 @@ impl<Timestamp> Frame<Timestamp> {
     pub fn bytes(&self) -> &[u8] {
         &self.buffer[0..self.length.unwrap()]
     }
+
+    pub fn channel(&self) -> Channel {
+        self.channel.unwrap()
+    }
 }
 
 impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
