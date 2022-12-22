@@ -8,7 +8,7 @@ use super::{traits, Rssi};
 /// Wireless M-Bus Transceiver Controller
 pub struct Controller<Transceiver: traits::Transceiver> {
     transceiver: Transceiver,
-    receiving: bool,
+    listening: bool,
 }
 
 pub struct Frame<Timestamp> {
@@ -46,27 +46,27 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     pub const fn new(transceiver: Transceiver) -> Self {
         Self {
             transceiver,
-            receiving: false,
+            listening: false,
         }
     }
 
     /// Setup the transceiver and enter idle state.
     pub async fn init(&mut self) -> Result<(), Transceiver::Error> {
-        self.receiving = false;
+        self.listening = false;
         self.transceiver.init().await
     }
 
     /// Prepare bytes for transmission.
     /// All bytes for the transmission must be written before the transmission is started.
     pub async fn write(&mut self, buffer: &[u8]) {
-        assert!(!self.receiving);
+        assert!(!self.listening);
         self.transceiver.write(buffer).await;
     }
 
     /// Transmit pre-written bytes.
     /// The transmitter enters idle after the transmission completes.
     pub async fn transmit(&mut self) -> Result<(), Transceiver::Error> {
-        assert!(!self.receiving);
+        assert!(!self.listening);
         self.transceiver.transmit().await
     }
 
@@ -75,51 +75,67 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     pub async fn receive<'a>(
         &'a mut self,
     ) -> impl Stream<Item = Frame<Transceiver::Timestamp>> + 'a {
+        assert!(!self.listening);
+
+        // Start the receiver on the chip
+        self.transceiver.listen().await;
+        self.listening = true;
+
         self.receive_stream()
     }
 
     #[stream(boxed_local, item = Frame<Transceiver::Timestamp>)]
     async fn receive_stream(&mut self) {
-        assert!(!self.receiving);
-        self.receiving = true;
-
         loop {
-            let (timestamp, rssi) = self.transceiver.receive().await;
+            // Wait for frame to be detected
+            let timestamp = self
+                .transceiver
+                .receive(phl::DERIVE_FRAME_LENGTH_MIN)
+                .await;
+            let rssi = self.transceiver.get_rssi().await;
             let mut frame = Frame::new(timestamp, rssi);
 
             // Frame was detected - read all frame bytes...
             loop {
                 let buffer = &mut frame.buffer[frame.received..];
-                let received = self.transceiver.read(buffer, frame.length).await;
+                let received = self.transceiver.read(buffer).await;
 
                 if let Ok(received) = received {
+                    // Things are progressing just fine - we are still receiving a frame
+
                     frame.received += received;
 
-                    if let Some(framelen) = frame.length {
-                        if frame.received >= framelen {
-                            yield frame;
-                            break;
-                        }
-                    } else {
+                    if frame.length.is_none() {
                         // Try and derive the frame length
-                        match phl::get_frame_length(&frame.buffer[..frame.received]) {
+                        match phl::derive_frame_length(&frame.buffer[..frame.received]) {
                             Ok((channel, length)) => {
                                 frame.channel = Some(channel);
                                 frame.length = Some(length);
+
+                                self.transceiver.accept(length).await;
                             }
                             Err(ReadError::NotEnoughBytes) => {
+                                // We need more bytes to derive the frame length
                                 continue;
                             }
                             Err(_) => {
-                                // Invalid frame length - restart receive
-                                self.transceiver.idle().await;
+                                // Invalid frame length - reject the frame
+                                self.transceiver.reject().await;
                                 break;
                             }
                         }
                     }
+
+                    if let Some(frame_length) = frame.length {
+                        if frame.received >= frame_length {
+                            yield frame;
+                            break;
+                        }
+                    }
                 } else {
-                    // Error during read - restart receive
+                    // Error while reading - restart the receiver
                     self.transceiver.idle().await;
+                    self.transceiver.listen().await;
                     break;
                 }
             }
@@ -129,7 +145,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     // Stop the receiver.
     pub async fn idle(&mut self) {
         self.transceiver.idle().await;
-        self.receiving = false;
+        self.listening = false;
     }
 
     /// Release the transceiver

@@ -11,6 +11,7 @@ use super::{Channel, FrameFormat, Layer, Packet, ReadError};
 
 const CRC: Crc<u16> = Crc::<u16>::new(&CRC_16_EN_13757);
 
+pub const DERIVE_FRAME_LENGTH_MIN: usize = 3;
 pub const MAX_FRAME_LENGTH: usize = ffa::MAX_FRAME_SIZE;
 
 pub struct Phl<A: Layer> {
@@ -19,8 +20,8 @@ pub struct Phl<A: Layer> {
 
 pub struct PhlFields;
 
-pub fn get_frame_length(buffer: &[u8]) -> Result<(Channel, usize), ReadError> {
-    if buffer.len() < 3 {
+pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), ReadError> {
+    if buffer.len() < DERIVE_FRAME_LENGTH_MIN {
         return Err(ReadError::NotEnoughBytes);
     }
 
