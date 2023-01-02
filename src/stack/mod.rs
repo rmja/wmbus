@@ -25,13 +25,13 @@ pub struct Packet {
     pub mbus_data: Vec<u8>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FrameFormat {
     FFA,
     FFB,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Channel {
     /// Mode C.
     ModeC(FrameFormat),
