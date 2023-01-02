@@ -3,7 +3,7 @@ use alloc::boxed::Box;
 use futures::Stream;
 use futures_async_stream::stream;
 
-use super::{traits, Rssi};
+use super::{traits::{self, RxToken}, Rssi};
 
 /// Wireless M-Bus Transceiver Controller
 pub struct Controller<Transceiver: traits::Transceiver> {
@@ -13,7 +13,7 @@ pub struct Controller<Transceiver: traits::Transceiver> {
 
 pub struct Frame<Timestamp> {
     pub timestamp: Timestamp,
-    pub rssi: Rssi,
+    rssi: Option<Rssi>,
     buffer: [u8; phl::MAX_FRAME_LENGTH],
     received: usize,
     channel: Option<Channel>,
@@ -21,15 +21,19 @@ pub struct Frame<Timestamp> {
 }
 
 impl<Timestamp> Frame<Timestamp> {
-    const fn new(timestamp: Timestamp, rssi: Rssi) -> Self {
+    const fn new(timestamp: Timestamp) -> Self {
         Self {
             timestamp,
-            rssi,
+            rssi: None,
             buffer: [0; phl::MAX_FRAME_LENGTH],
             received: 0,
             channel: None,
             length: None,
         }
+    }
+
+    pub fn rssi(&self) -> Rssi {
+        self.rssi.unwrap()
     }
 
     pub fn bytes(&self) -> &[u8] {
@@ -58,9 +62,9 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
 
     /// Prepare bytes for transmission.
     /// All bytes for the transmission must be written before the transmission is started.
-    pub async fn write(&mut self, buffer: &[u8]) {
+    pub async fn write(&mut self, buffer: &[u8]) -> Result<(), Transceiver::Error> {
         assert!(!self.listening);
-        self.transceiver.write(buffer).await;
+        self.transceiver.write(buffer).await
     }
 
     /// Transmit pre-written bytes.
@@ -74,31 +78,30 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     /// Note that the receiver is _not_ stopped when the stream is dropped, so idle() must be called manually after the stream is dropped.
     pub async fn receive<'a>(
         &'a mut self,
-    ) -> impl Stream<Item = Frame<Transceiver::Timestamp>> + 'a {
+    ) -> Result<impl Stream<Item = Frame<Transceiver::Timestamp>> + 'a, Transceiver::Error> {
         assert!(!self.listening);
 
         // Start the receiver on the chip
-        self.transceiver.listen().await;
+        self.transceiver.listen().await?;
         self.listening = true;
 
-        self.receive_stream()
+        Ok(self.receive_stream())
     }
 
     #[stream(boxed_local, item = Frame<Transceiver::Timestamp>)]
     async fn receive_stream(&mut self) {
         loop {
             // Wait for frame to be detected
-            let timestamp = self
+            let mut token = self
                 .transceiver
                 .receive(phl::DERIVE_FRAME_LENGTH_MIN)
-                .await;
-            let rssi = self.transceiver.get_rssi().await;
-            let mut frame = Frame::new(timestamp, rssi);
+                .await
+                .unwrap();
+            let mut frame = Frame::new(token.timestamp());
 
             // Frame was detected - read all frame bytes...
             loop {
-                let buffer = &mut frame.buffer[frame.received..];
-                let received = self.transceiver.read(buffer).await;
+                let received = self.transceiver.read(&mut token, &mut frame.buffer[frame.received..]).await;
 
                 if let Ok(received) = received {
                     // Things are progressing just fine - we are still receiving a frame
@@ -109,18 +112,17 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                         // Try and derive the frame length
                         match phl::derive_frame_length(&frame.buffer[..frame.received]) {
                             Ok((channel, length)) => {
+                                self.transceiver.accept(&mut token, length).await.unwrap();
                                 frame.channel = Some(channel);
                                 frame.length = Some(length);
-
-                                self.transceiver.accept(length).await;
+                                frame.rssi = Some(self.transceiver.get_rssi().await.unwrap());
                             }
                             Err(ReadError::NotEnoughBytes) => {
                                 // We need more bytes to derive the frame length
                                 continue;
                             }
                             Err(_) => {
-                                // Invalid frame length - reject the frame
-                                self.transceiver.reject().await;
+                                // Invalid frame length - wait for a new frame to be received
                                 break;
                             }
                         }
@@ -134,8 +136,8 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                     }
                 } else {
                     // Error while reading - restart the receiver
-                    self.transceiver.idle().await;
-                    self.transceiver.listen().await;
+                    self.transceiver.idle().await.unwrap();
+                    self.transceiver.listen().await.unwrap();
                     break;
                 }
             }
@@ -143,9 +145,10 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     }
 
     // Stop the receiver.
-    pub async fn idle(&mut self) {
-        self.transceiver.idle().await;
+    pub async fn idle(&mut self) -> Result<(), Transceiver::Error> {
+        self.transceiver.idle().await?;
         self.listening = false;
+        Ok(())
     }
 
     /// Release the transceiver
