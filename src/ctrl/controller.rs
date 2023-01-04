@@ -3,7 +3,10 @@ use alloc::boxed::Box;
 use futures::Stream;
 use futures_async_stream::stream;
 
-use super::{traits::{self, RxToken}, Rssi};
+use super::{
+    traits::{self, RxToken},
+    Rssi,
+};
 
 /// Wireless M-Bus Transceiver Controller
 pub struct Controller<Transceiver: traits::Transceiver> {
@@ -12,7 +15,7 @@ pub struct Controller<Transceiver: traits::Transceiver> {
 }
 
 pub struct Frame<Timestamp> {
-    pub timestamp: Timestamp,
+    timestamp: Option<Timestamp>,
     rssi: Option<Rssi>,
     buffer: [u8; phl::MAX_FRAME_LENGTH],
     received: usize,
@@ -20,10 +23,10 @@ pub struct Frame<Timestamp> {
     length: Option<usize>,
 }
 
-impl<Timestamp> Frame<Timestamp> {
-    const fn new(timestamp: Timestamp) -> Self {
+impl<Timestamp> const Default for Frame<Timestamp> {
+    fn default() -> Self {
         Self {
-            timestamp,
+            timestamp: None,
             rssi: None,
             buffer: [0; phl::MAX_FRAME_LENGTH],
             received: 0,
@@ -31,11 +34,9 @@ impl<Timestamp> Frame<Timestamp> {
             length: None,
         }
     }
+}
 
-    pub fn rssi(&self) -> Rssi {
-        self.rssi.unwrap()
-    }
-
+impl<Timestamp> Frame<Timestamp> {
     pub fn bytes(&self) -> &[u8] {
         &self.buffer[0..self.length.unwrap()]
     }
@@ -97,11 +98,15 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                 .receive(phl::DERIVE_FRAME_LENGTH_MIN)
                 .await
                 .unwrap();
-            let mut frame = Frame::new(token.timestamp());
+            let mut frame = Frame::default();
+            frame.timestamp = token.timestamp();
 
             // Frame was detected - read all frame bytes...
             loop {
-                let received = self.transceiver.read(&mut token, &mut frame.buffer[frame.received..]).await;
+                let received = self
+                    .transceiver
+                    .read(&mut token, &mut frame.buffer[frame.received..])
+                    .await;
 
                 if let Ok(received) = received {
                     // Things are progressing just fine - we are still receiving a frame

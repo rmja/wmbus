@@ -2,6 +2,7 @@
 #![feature(generators)]
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
+#![feature(const_trait_impl)]
 
 extern crate alloc;
 

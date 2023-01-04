@@ -5,7 +5,7 @@ use mockall::automock;
 
 use super::Rssi;
 
-#[cfg_attr(test, automock(type Timestamp = core::time::Duration; type Error = ();))]
+#[cfg_attr(test, automock(type Timestamp = core::time::Duration; type RxToken = stubs::RxTokenStub; type Error = ();))]
 pub trait Transceiver {
     type Timestamp: Copy;
     type RxToken: RxToken<Self::Timestamp>;
@@ -28,7 +28,7 @@ pub trait Transceiver {
 
     /// Try and receive a frame.
     /// The future will complete when `min_frame_length` frame bytes are received.
-    /// The receiver will continue to receive the frame until either `accept` or `reject` are invoked.
+    /// The receiver will continue to receive the frame until either `accept` is invoked or `receive` are re-invoked.
     async fn receive(&mut self, min_frame_length: usize) -> Result<Self::RxToken, Self::Error>;
 
     /// Read bytes for the packet currently being received.
@@ -52,5 +52,20 @@ pub trait Transceiver {
 
 pub trait RxToken<Timestamp: Copy> {
     /// Get the start-of-frame timestamp
-    fn timestamp(&self) -> Timestamp;
+    fn timestamp(&self) -> Option<Timestamp>;
+}
+
+#[cfg(test)]
+pub mod stubs {
+    use super::RxToken;
+
+    pub struct RxTokenStub {
+        timestamp: core::time::Duration,
+    }
+
+    impl RxToken<core::time::Duration> for RxTokenStub {
+        fn timestamp(&self) -> Option<core::time::Duration> {
+            Some(self.timestamp)
+        }
+    }
 }
