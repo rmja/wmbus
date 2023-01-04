@@ -3,6 +3,7 @@
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
 #![feature(const_trait_impl)]
+#![feature(let_chains)]
 
 extern crate alloc;
 

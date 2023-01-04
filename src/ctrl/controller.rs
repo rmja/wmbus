@@ -133,11 +133,10 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                         }
                     }
 
-                    if let Some(frame_length) = frame.length {
-                        if frame.received >= frame_length {
+                    if let Some(frame_length) = frame.length && frame.received >= frame_length {
+                            // Frame is fully received
                             yield frame;
                             break;
-                        }
                     }
                 } else {
                     // Error while reading - restart the receiver
