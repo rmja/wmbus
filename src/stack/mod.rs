@@ -18,12 +18,15 @@ pub trait Layer {
 
 /// A Wireless M-Bus packet
 pub struct Packet {
+    pub rssi: Option<Rssi>,
     pub channel: Channel,
     pub phl: Option<phl::PhlFields>,
     pub dll: Option<dll::DllFields>,
     pub ell: Option<ell::EllFields>,
     pub mbus_data: Vec<u8>,
 }
+
+pub type Rssi = i8;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FrameFormat {
@@ -42,6 +45,7 @@ pub enum Channel {
 impl Packet {
     pub const fn new(channel: Channel) -> Self {
         Self {
+            rssi: None,
             channel,
             phl: None,
             dll: None,

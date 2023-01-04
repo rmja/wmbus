@@ -1,11 +1,10 @@
-use crate::stack::{phl, Channel, ReadError};
+use crate::stack::{phl, Channel, ReadError, Rssi};
 use alloc::boxed::Box;
 use futures::Stream;
 use futures_async_stream::stream;
 
 use super::{
     traits::{self, RxToken},
-    Rssi,
 };
 
 /// Wireless M-Bus Transceiver Controller
