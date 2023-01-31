@@ -11,8 +11,8 @@ pub struct Controller<Transceiver: traits::Transceiver> {
 }
 
 pub struct Frame<Timestamp> {
-    timestamp: Option<Timestamp>,
-    rssi: Option<Rssi>,
+    pub timestamp: Option<Timestamp>,
+    pub rssi: Option<Rssi>,
     buffer: [u8; phl::MAX_FRAME_LENGTH],
     received: usize,
     channel: Option<Channel>,
@@ -94,8 +94,11 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                 .receive(phl::DERIVE_FRAME_LENGTH_MIN)
                 .await
                 .unwrap();
-            let mut frame = Frame::default();
-            frame.timestamp = token.timestamp();
+            let mut frame = Frame
+            {
+                timestamp: token.timestamp(),
+                ..Default::default()
+            };
 
             // Frame was detected - read all frame bytes...
             loop {
