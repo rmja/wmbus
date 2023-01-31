@@ -4,7 +4,7 @@ pub mod ffb;
 use bitvec::prelude::*;
 use crc::{Crc, CRC_16_EN_13757};
 
-use crate::modet::threeoutofsix::ThreeOutOfSix;
+use crate::modet::threeoutofsix::{ThreeOutOfSix, self};
 
 use super::{Channel, FrameFormat, Layer, Packet, ReadError, WriteError, Writer};
 
@@ -22,8 +22,8 @@ pub struct PhlFields;
 #[derive(Debug, PartialEq)]
 pub enum Error {
     Incomplete,
-    InvalidSyncword,
-    InvalidThreeOutOfSix,
+    Syncword,
+    ThreeOutOfSix(threeoutofsix::Error),
     InvalidLength,
     CrcBlock(usize),
 }
@@ -56,7 +56,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
                 let frame_length = 2 + ffb::get_frame_length(&buffer[2..])?;
                 Ok((Channel::ModeC(FrameFormat::FFB), frame_length))
             }
-            _ => Err(Error::InvalidSyncword),
+            _ => Err(Error::Syncword),
         }
     } else if buffer[1] == 0x44 {
         // This is very likely a ModeC FFB frame where we have synchronized on the last 16 bits of its syncword 543D_543D.
@@ -89,7 +89,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
         Ok((Channel::ModeC(FrameFormat::FFB), frame_length))
     } else {
         let bits = buffer.view_bits();
-        let buffer = ThreeOutOfSix::decode(&bits[..12]).map_err(|_| Error::InvalidThreeOutOfSix)?;
+        let buffer = ThreeOutOfSix::decode(&bits[..12]).map_err(Error::ThreeOutOfSix)?;
         assert_eq!(1, buffer.len());
         let frame_length = ffa::get_frame_length(&buffer)?;
         Ok((Channel::ModeT, frame_length))
@@ -111,7 +111,7 @@ impl<A: Layer> Layer for Phl<A> {
                 let buffer_bits = buffer.view_bits::<Msb0>();
                 let encoded = &buffer_bits[..6 * symbols];
                 let decoded =
-                    ThreeOutOfSix::decode(encoded).map_err(|_| Error::InvalidThreeOutOfSix)?;
+                    ThreeOutOfSix::decode(encoded).map_err(Error::ThreeOutOfSix)?;
                 ffa::read(&decoded)?
             }
             Channel::ModeC(FrameFormat::FFA) => ffa::read(buffer)?,

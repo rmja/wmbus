@@ -16,8 +16,8 @@ const DECODE_TABLE: [i8; 0x40] = [
     -1, 13, 14, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 ];
 
-#[derive(Debug)]
-pub enum ThreeOutOfSixError {
+#[derive(Debug, PartialEq)]
+pub enum Error {
     InvalidInputLength,
     InvalidSymbol,
     Write,
@@ -42,10 +42,10 @@ impl ThreeOutOfSix {
         encoded
     }
 
-    pub fn decode<T: BitStore>(input: &BitSlice<T, Msb0>) -> Result<Vec<u8>, ThreeOutOfSixError> {
+    pub fn decode<T: BitStore>(input: &BitSlice<T, Msb0>) -> Result<Vec<u8>, Error> {
         let symbols = input.chunks_exact(6);
         if !symbols.remainder().is_empty() || symbols.len() & 1 != 0 {
-            return Err(ThreeOutOfSixError::InvalidInputLength);
+            return Err(Error::InvalidInputLength);
         }
 
         let mut decoded = Vec::with_capacity(symbols.len() * 2);
@@ -55,7 +55,7 @@ impl ThreeOutOfSix {
             let index = symbol.load_be::<usize>();
             let value = DECODE_TABLE[index];
             if value == -1 {
-                return Err(ThreeOutOfSixError::InvalidSymbol);
+                return Err(Error::InvalidSymbol);
             }
             let value = value as u8;
             if let Some(previous) = carry.take() {
