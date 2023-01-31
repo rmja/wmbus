@@ -1,7 +1,10 @@
 use assert_hex::assert_eq_hex;
 use wmbus::{
     modet::threeoutofsix::ThreeOutOfSix,
-    stack::{phl, Channel, FrameFormat, Stack},
+    stack::{
+        phl::{FrameFormat, FFA, FFB},
+        Channel, Stack, Packet,
+    },
     DeviceType, ManufacturerCode,
 };
 
@@ -20,10 +23,10 @@ fn can_read_modec_ffa() {
     ];
 
     // When
-    let packet = stack.read(frame, Channel::ModeC(FrameFormat::FFA)).unwrap();
+    let packet: Packet<69> = stack.read(frame, Channel::ModeCFFA).unwrap();
 
     // Then
-    assert_eq!(frame.len(), phl::ffa::get_frame_length(frame).unwrap());
+    assert_eq!(frame.len(), FFA::get_frame_length(frame).unwrap());
 
     let dll = packet.dll.unwrap();
     assert_eq!(
@@ -53,10 +56,10 @@ fn can_read_modec_ffb() {
     ];
 
     // When
-    let packet = stack.read(frame, Channel::ModeC(FrameFormat::FFB)).unwrap();
+    let packet: Packet<8> = stack.read(frame, Channel::ModeCFFB).unwrap();
 
     // Then
-    assert_eq!(frame.len(), phl::ffb::get_frame_length(frame).unwrap());
+    assert_eq!(frame.len(), FFB::get_frame_length(frame).unwrap());
 
     let dll = packet.dll.unwrap();
     assert_eq!(
@@ -93,10 +96,10 @@ fn can_read_modet() {
     let encoded = encoded.as_raw_slice();
 
     // When
-    let packet = stack.read(encoded, Channel::ModeT).unwrap();
+    let packet: Packet<69> = stack.read(encoded, Channel::ModeT).unwrap();
 
     // Then
-    assert_eq!(frame.len(), phl::ffa::get_frame_length(frame).unwrap());
+    assert_eq!(frame.len(), FFA::get_frame_length(frame).unwrap());
 
     let dll = packet.dll.unwrap();
     assert_eq!(
