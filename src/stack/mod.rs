@@ -14,7 +14,27 @@ pub struct Stack<A: Layer> {
 /// Layer trait
 pub trait Layer {
     fn read(&self, packet: &mut Packet, buffer: &[u8]) -> Result<(), ReadError>;
-    fn write(&self, writer: &mut Vec<u8>, packet: &Packet);
+    fn write(&self, writer: &mut impl Writer, packet: &Packet) -> Result<(), WriteError>;
+}
+
+pub trait Writer {
+    fn write(&mut self, buf: &[u8]) -> Result<(), WriteError>;
+}
+
+#[cfg(feature = "alloc")]
+impl Writer for Vec<u8> {
+    fn write(&mut self, buf: &[u8]) -> Result<(), WriteError> {
+        self.extend_from_slice(buf);
+        Ok(())
+    }
+}
+
+#[cfg(feature = "heapless")]
+impl<const N: usize> Writer for heapless::Vec<u8, N> {
+    fn write(&mut self, buf: &[u8]) -> Result<(), WriteError> {
+        self.extend_from_slice(buf)
+            .map_err(|_| WriteError::Capacity)
+    }
 }
 
 /// A Wireless M-Bus packet
@@ -28,6 +48,19 @@ pub struct Packet {
 }
 
 pub type Rssi = i8;
+
+#[derive(Debug, PartialEq)]
+pub enum ReadError {
+    Incomplete,
+    Phl(phl::Error),
+    Dll(dll::Error),
+    Ell(ell::Error),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum WriteError {
+    Capacity,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FrameFormat {
@@ -54,14 +87,6 @@ impl Packet {
             mbus_data: Vec::new(),
         }
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ReadError {
-    Incomplete,
-    Phl(phl::Error),
-    Dll(dll::Error),
-    Ell(ell::Error),
 }
 
 impl Stack<ell::Ell<apl::Apl>> {
@@ -97,7 +122,7 @@ impl<A: Layer> Stack<A> {
     }
 
     /// Write a packet
-    pub fn write(&self, writer: &mut Vec<u8>, packet: &Packet) {
+    pub fn write(&self, writer: &mut impl Writer, packet: &Packet) -> Result<(), WriteError> {
         self.phl.write(writer, packet)
     }
 }

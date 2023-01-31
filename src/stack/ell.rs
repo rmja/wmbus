@@ -1,6 +1,5 @@
-use super::{Layer, Packet, ReadError};
+use super::{Layer, Packet, ReadError, WriteError, Writer};
 use crate::address::WMBusAddress;
-use alloc::vec::Vec;
 
 pub struct Ell<A: Layer> {
     above: A,
@@ -107,7 +106,7 @@ impl<A: Layer> Layer for Ell<A> {
         self.above.read(packet, &buffer[offset..])
     }
 
-    fn write(&self, _writer: &mut Vec<u8>, _packet: &Packet) {
+    fn write(&self, _writer: &mut impl Writer, _packet: &Packet) -> Result<(), WriteError> {
         todo!()
     }
 }

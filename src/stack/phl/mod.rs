@@ -1,13 +1,12 @@
 pub mod ffa;
 pub mod ffb;
 
-use alloc::vec::Vec;
 use bitvec::prelude::*;
 use crc::{Crc, CRC_16_EN_13757};
 
 use crate::modet::threeoutofsix::ThreeOutOfSix;
 
-use super::{Channel, FrameFormat, Layer, Packet, ReadError};
+use super::{Channel, FrameFormat, Layer, Packet, ReadError, WriteError, Writer};
 
 const CRC: Crc<u16> = Crc::<u16>::new(&CRC_16_EN_13757);
 
@@ -122,7 +121,7 @@ impl<A: Layer> Layer for Phl<A> {
         self.above.read(packet, &payload)
     }
 
-    fn write(&self, _writer: &mut Vec<u8>, _packet: &Packet) {
+    fn write(&self, _writer: &mut impl Writer, _packet: &Packet) -> Result<(), WriteError> {
         todo!()
     }
 }

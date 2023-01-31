@@ -1,5 +1,4 @@
-use super::{Layer, Packet, ReadError};
-use alloc::vec::Vec;
+use super::{Layer, Packet, ReadError, WriteError, Writer};
 
 /// Application Layer
 pub struct Apl;
@@ -16,7 +15,7 @@ impl Layer for Apl {
         Ok(())
     }
 
-    fn write(&self, writer: &mut Vec<u8>, packet: &Packet) {
-        writer.extend_from_slice(&packet.mbus_data);
+    fn write(&self, writer: &mut impl Writer, packet: &Packet) -> Result<(), WriteError> {
+        writer.write(&packet.mbus_data)
     }
 }

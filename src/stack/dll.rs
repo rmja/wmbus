@@ -1,7 +1,6 @@
 use crate::address::WMBusAddress;
 
-use super::{Layer, ReadError};
-use alloc::vec::Vec;
+use super::{Layer, ReadError, WriteError, Writer};
 
 const HEADER_LENGTH: usize = 10;
 
@@ -50,7 +49,7 @@ impl<A: Layer> Layer for Dll<A> {
         self.above.read(packet, &buffer[HEADER_LENGTH..])
     }
 
-    fn write(&self, _writer: &mut Vec<u8>, _packet: &super::Packet) {
+    fn write(&self, _writer: &mut impl Writer, _packet: &super::Packet) -> Result<(), WriteError> {
         todo!()
     }
 }
