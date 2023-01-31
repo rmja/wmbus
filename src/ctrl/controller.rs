@@ -3,9 +3,7 @@ use alloc::boxed::Box;
 use futures::Stream;
 use futures_async_stream::stream;
 
-use super::{
-    traits::{self, RxToken},
-};
+use super::traits::{self, RxToken};
 
 /// Wireless M-Bus Transceiver Controller
 pub struct Controller<Transceiver: traits::Transceiver> {

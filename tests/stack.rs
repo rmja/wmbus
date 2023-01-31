@@ -1,6 +1,6 @@
 use assert_hex::assert_eq_hex;
 use wmbus::{
-    modet::ThreeOutOfSix,
+    modet::threeoutofsix::ThreeOutOfSix,
     stack::{phl, Channel, FrameFormat, Stack},
     DeviceType, ManufacturerCode,
 };

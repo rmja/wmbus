@@ -6,10 +6,10 @@ use crate::{DeviceType, ManufacturerCode};
 
 #[derive(PartialEq)]
 pub struct WMBusAddress {
-    manufacturer_code: u16,
-    serial_number: BcdNumber<4>,
-    version: u8,
-    device_type: u8,
+    pub manufacturer_code: u16,
+    pub serial_number: BcdNumber<4>,
+    pub version: u8,
+    pub device_type: u8,
 }
 
 #[derive(Debug)]

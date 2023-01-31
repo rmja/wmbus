@@ -1,9 +1,6 @@
 use alloc::vec::Vec;
 use bitvec::{field::BitField, prelude::*};
 
-pub const SYNCWORD: [u8; 2] = [0x54, 0x3D];
-pub const CHIPRATE: u32 = 100_000; // kcps
-
 pub struct ThreeOutOfSix;
 
 // Table 10 in EN13757-4
@@ -23,6 +20,7 @@ const DECODE_TABLE: [i8; 0x40] = [
 pub enum ThreeOutOfSixError {
     InvalidInputLength,
     InvalidSymbol,
+    Write,
 }
 
 impl ThreeOutOfSix {

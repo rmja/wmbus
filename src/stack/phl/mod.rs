@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use bitvec::prelude::*;
 use crc::{Crc, CRC_16_EN_13757};
 
-use crate::modet::ThreeOutOfSix;
+use crate::modet::threeoutofsix::ThreeOutOfSix;
 
 use super::{Channel, FrameFormat, Layer, Packet, ReadError};
 
