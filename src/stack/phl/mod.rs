@@ -3,6 +3,7 @@ mod ffb;
 
 use bitvec::prelude::*;
 use crc::{Crc, CRC_16_EN_13757};
+use heapless::Vec;
 
 use crate::modet::threeoutofsix::{self, ThreeOutOfSix};
 
@@ -39,12 +40,13 @@ impl From<Error> for ReadError {
     }
 }
 
-#[const_trait]
 pub trait FrameFormat {
     const APL_MAX: usize;
+    const DATA_MAX: usize;
     const FRAME_MAX: usize;
 
     fn get_frame_length(buffer: &[u8]) -> Result<usize, Error>;
+    fn read(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error>;
 }
 
 pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
@@ -114,20 +116,25 @@ impl<A: Layer> Phl<A> {
 
 impl<A: Layer> Layer for Phl<A> {
     fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
-        let payload = match packet.channel {
+        match packet.channel {
             Channel::ModeT => {
                 let mut symbols = (buffer.len() * 8) / 6;
                 symbols &= !1; // The number of symbols must be even
                 let buffer_bits = buffer.view_bits::<Msb0>();
                 let encoded = &buffer_bits[..6 * symbols];
                 let decoded = ThreeOutOfSix::decode(encoded).map_err(Error::ThreeOutOfSix)?;
-                ffa::read(&decoded)?
+                let payload = FFA::read(&decoded)?;
+                self.above.read(packet, &payload)
             }
-            Channel::ModeCFFA => ffa::read(buffer)?,
-            Channel::ModeCFFB => ffb::read(buffer)?,
-        };
-
-        self.above.read(packet, &payload)
+            Channel::ModeCFFA => {
+                let payload = FFA::read(buffer)?;
+                self.above.read(packet, &payload)
+            }
+            Channel::ModeCFFB => {
+                let payload = FFB::read(buffer)?;
+                self.above.read(packet, &payload)
+            }
+        }
     }
 
     fn write<const N: usize>(

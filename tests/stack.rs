@@ -3,7 +3,7 @@ use wmbus::{
     modet::threeoutofsix::ThreeOutOfSix,
     stack::{
         phl::{FrameFormat, FFA, FFB},
-        Channel, Stack, Packet,
+        Channel, Packet, Stack,
     },
     DeviceType, ManufacturerCode,
 };

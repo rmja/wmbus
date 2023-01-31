@@ -1,8 +1,7 @@
-use alloc::vec::Vec;
-
 use super::is_valid_crc;
 use super::Error;
 use super::FrameFormat;
+use heapless::Vec;
 
 const FIRST_BLOCK_DATA_LENGTH: usize = 1 + 1 + 2 + 6;
 const SECOND_BLOCK_MAX_DATA_LENGTH: usize = 1 + 115;
@@ -11,8 +10,9 @@ const MIN_FRAME_LENGTH: usize = MIN_DATA_LENGTH + 2;
 
 pub struct FFB;
 
-impl const FrameFormat for FFB {
-    const APL_MAX: usize = Self::FRAME_MAX - FIRST_BLOCK_DATA_LENGTH - 2 - 2;
+impl FrameFormat for FFB {
+    const APL_MAX: usize = Self::DATA_MAX - FIRST_BLOCK_DATA_LENGTH;
+    const DATA_MAX: usize = Self::FRAME_MAX - 2 - 2;
     const FRAME_MAX: usize = 256;
 
     fn get_frame_length(buffer: &[u8]) -> Result<usize, Error> {
@@ -29,25 +29,25 @@ impl const FrameFormat for FFB {
 
         Ok(frame_length)
     }
-}
 
-pub(crate) fn read(buffer: &[u8]) -> Result<Vec<u8>, Error> {
-    let frame_length = FFB::get_frame_length(buffer)?;
-    if buffer.len() < frame_length {
-        return Err(Error::Incomplete);
-    }
-
-    let mut data = Vec::with_capacity(frame_length); // Too large
-
-    for (index, block) in buffer
-        .chunks(FIRST_BLOCK_DATA_LENGTH + SECOND_BLOCK_MAX_DATA_LENGTH + 2)
-        .enumerate()
-    {
-        if !is_valid_crc(block) {
-            return Err(Error::CrcBlock(index));
+    fn read(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error> {
+        let frame_length = FFB::get_frame_length(buffer)?;
+        if buffer.len() < frame_length {
+            return Err(Error::Incomplete);
         }
-        data.extend_from_slice(&block[..block.len() - 2]);
-    }
 
-    Ok(data)
+        let mut data = Vec::new();
+
+        for (index, block) in buffer
+            .chunks(FIRST_BLOCK_DATA_LENGTH + SECOND_BLOCK_MAX_DATA_LENGTH + 2)
+            .enumerate()
+        {
+            if !is_valid_crc(block) {
+                return Err(Error::CrcBlock(index));
+            }
+            data.extend_from_slice(&block[..block.len() - 2]).unwrap();
+        }
+
+        Ok(data)
+    }
 }

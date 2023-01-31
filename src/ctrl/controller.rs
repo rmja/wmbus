@@ -94,8 +94,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                 .receive(phl::DERIVE_FRAME_LENGTH_MIN)
                 .await
                 .unwrap();
-            let mut frame = Frame
-            {
+            let mut frame = Frame {
                 timestamp: token.timestamp(),
                 ..Default::default()
             };

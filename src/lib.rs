@@ -4,6 +4,7 @@
 #![feature(async_fn_in_trait)]
 #![feature(const_trait_impl)]
 #![feature(let_chains)]
+#![feature(generic_const_exprs)]
 
 extern crate alloc;
 

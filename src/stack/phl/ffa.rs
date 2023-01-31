@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use heapless::Vec;
 
 use super::is_valid_crc;
 use super::Error;
@@ -12,8 +12,9 @@ const MAX_BLOCK_COUNT: usize = 17; // 10 + (1 + 15) + 14 * 16 + 6 = 256
 
 pub struct FFA;
 
-impl const FrameFormat for FFA {
+impl FrameFormat for FFA {
     const APL_MAX: usize = MAX_DATA_LENGTH - FIRST_BLOCK_DATA_LENGTH;
+    const DATA_MAX: usize = MAX_DATA_LENGTH;
     const FRAME_MAX: usize = MAX_DATA_LENGTH + 2 * MAX_BLOCK_COUNT;
 
     fn get_frame_length(buffer: &[u8]) -> Result<usize, Error> {
@@ -23,6 +24,35 @@ impl const FrameFormat for FFA {
 
         let data_length = 1 + buffer[0] as usize;
         get_frame_length_from_data_length(data_length)
+    }
+
+    fn read(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error> {
+        let frame_length = Self::get_frame_length(buffer)?;
+        if buffer.len() < frame_length {
+            return Err(Error::Incomplete);
+        }
+
+        let (first_block, other_blocks) = buffer.split_at(FIRST_BLOCK_DATA_LENGTH + 2);
+
+        // First block
+        if !is_valid_crc(first_block) {
+            return Err(Error::CrcBlock(0));
+        }
+
+        let mut data = Vec::from_slice(&first_block[..first_block.len() - 2]).unwrap();
+
+        // Subsequent blocks
+        for (index, block) in other_blocks
+            .chunks(OTHER_BLOCK_MAX_DATA_LENGTH + 2)
+            .enumerate()
+        {
+            if !is_valid_crc(block) {
+                return Err(Error::CrcBlock(1 + index));
+            }
+            data.extend_from_slice(&block[..block.len() - 2]).unwrap();
+        }
+
+        Ok(data)
     }
 }
 
@@ -49,37 +79,6 @@ const fn get_frame_length_from_data_length(data_length: usize) -> Result<usize, 
     debug_assert!(frame_length <= FFA::FRAME_MAX);
 
     Ok(frame_length)
-}
-
-pub(crate) fn read(buffer: &[u8]) -> Result<Vec<u8>, Error> {
-    let frame_length = FFA::get_frame_length(buffer)?;
-    if buffer.len() < frame_length {
-        return Err(Error::Incomplete);
-    }
-
-    let data_length = 1 + buffer[0] as usize;
-    let mut data = Vec::with_capacity(data_length);
-
-    let (first_block, other_blocks) = buffer.split_at(FIRST_BLOCK_DATA_LENGTH + 2);
-
-    // First block
-    if !is_valid_crc(first_block) {
-        return Err(Error::CrcBlock(0));
-    }
-    data.extend_from_slice(&first_block[..first_block.len() - 2]);
-
-    // Subsequent blocks
-    for (index, block) in other_blocks
-        .chunks(OTHER_BLOCK_MAX_DATA_LENGTH + 2)
-        .enumerate()
-    {
-        if !is_valid_crc(block) {
-            return Err(Error::CrcBlock(1 + index));
-        }
-        data.extend_from_slice(&block[..block.len() - 2]);
-    }
-
-    Ok(data)
 }
 
 #[cfg(test)]
