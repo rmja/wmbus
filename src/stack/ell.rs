@@ -106,7 +106,11 @@ impl<A: Layer> Layer for Ell<A> {
         self.above.read(packet, &buffer[offset..])
     }
 
-    fn write<const N: usize>(&self, _writer: &mut impl Writer, _packet: &Packet<N>) -> Result<(), WriteError> {
+    fn write<const N: usize>(
+        &self,
+        _writer: &mut impl Writer,
+        _packet: &Packet<N>,
+    ) -> Result<(), WriteError> {
         todo!()
     }
 }

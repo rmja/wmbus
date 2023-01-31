@@ -1,8 +1,8 @@
 use alloc::vec::Vec;
 
-use super::FrameFormat;
 use super::is_valid_crc;
 use super::Error;
+use super::FrameFormat;
 
 const FIRST_BLOCK_DATA_LENGTH: usize = 1 + 1 + 2 + 6;
 const OTHER_BLOCK_MAX_DATA_LENGTH: usize = 16;
@@ -20,7 +20,7 @@ impl const FrameFormat for FFA {
         if buffer.is_empty() {
             return Err(Error::Incomplete);
         }
-    
+
         let data_length = 1 + buffer[0] as usize;
         get_frame_length_from_data_length(data_length)
     }

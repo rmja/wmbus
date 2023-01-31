@@ -14,7 +14,11 @@ pub struct Stack<A: Layer> {
 /// Layer trait
 pub trait Layer {
     fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError>;
-    fn write<const N: usize>(&self, writer: &mut impl Writer, packet: &Packet<N>) -> Result<(), WriteError>;
+    fn write<const N: usize>(
+        &self,
+        writer: &mut impl Writer,
+        packet: &Packet<N>,
+    ) -> Result<(), WriteError>;
 }
 
 pub trait Writer {
@@ -111,14 +115,22 @@ impl Stack<apl::Apl> {
 
 impl<A: Layer> Stack<A> {
     /// Read a packet from a byte buffer
-    pub fn read<const N: usize>(&self, buffer: &[u8], channel: Channel) -> Result<Packet<N>, ReadError> {
+    pub fn read<const N: usize>(
+        &self,
+        buffer: &[u8],
+        channel: Channel,
+    ) -> Result<Packet<N>, ReadError> {
         let mut packet = Packet::new(channel);
         self.phl.read(&mut packet, buffer)?;
         Ok(packet)
     }
 
     /// Write a packet
-    pub fn write<const N: usize>(&self, writer: &mut impl Writer, packet: &Packet<N>) -> Result<(), WriteError> {
+    pub fn write<const N: usize>(
+        &self,
+        writer: &mut impl Writer,
+        packet: &Packet<N>,
+    ) -> Result<(), WriteError> {
         self.phl.write(writer, packet)
     }
 }

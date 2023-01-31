@@ -1,8 +1,8 @@
 use alloc::vec::Vec;
 
-use super::FrameFormat;
 use super::is_valid_crc;
 use super::Error;
+use super::FrameFormat;
 
 const FIRST_BLOCK_DATA_LENGTH: usize = 1 + 1 + 2 + 6;
 const SECOND_BLOCK_MAX_DATA_LENGTH: usize = 1 + 115;
@@ -19,14 +19,14 @@ impl const FrameFormat for FFB {
         if buffer.is_empty() {
             return Err(Error::Incomplete);
         }
-    
+
         let frame_length = 1 + buffer[0] as usize;
         if frame_length < MIN_FRAME_LENGTH {
             return Err(Error::InvalidLength);
         }
-    
+
         debug_assert!(frame_length <= Self::FRAME_MAX);
-    
+
         Ok(frame_length)
     }
 }

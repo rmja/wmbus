@@ -16,7 +16,11 @@ impl Layer for Apl {
         Ok(())
     }
 
-    fn write<const N: usize>(&self, writer: &mut impl Writer, packet: &Packet<N>) -> Result<(), WriteError> {
+    fn write<const N: usize>(
+        &self,
+        writer: &mut impl Writer,
+        packet: &Packet<N>,
+    ) -> Result<(), WriteError> {
         writer.write(&packet.mbus_data)
     }
 }
