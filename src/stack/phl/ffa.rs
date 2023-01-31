@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 
+use super::FrameFormat;
 use super::is_valid_crc;
 use super::Error;
 
@@ -8,15 +9,21 @@ const OTHER_BLOCK_MAX_DATA_LENGTH: usize = 16;
 const MIN_DATA_LENGTH: usize = FIRST_BLOCK_DATA_LENGTH + 1; // CI field must be present
 const MAX_DATA_LENGTH: usize = 256;
 const MAX_BLOCK_COUNT: usize = 17; // 10 + (1 + 15) + 14 * 16 + 6 = 256
-pub const MAX_FRAME_SIZE: usize = MAX_DATA_LENGTH + 2 * MAX_BLOCK_COUNT;
 
-pub const fn get_frame_length(buffer: &[u8]) -> Result<usize, Error> {
-    if buffer.is_empty() {
-        return Err(Error::Incomplete);
+pub struct FFA;
+
+impl const FrameFormat for FFA {
+    const APL_MAX: usize = MAX_DATA_LENGTH - FIRST_BLOCK_DATA_LENGTH;
+    const FRAME_MAX: usize = MAX_DATA_LENGTH + 2 * MAX_BLOCK_COUNT;
+
+    fn get_frame_length(buffer: &[u8]) -> Result<usize, Error> {
+        if buffer.is_empty() {
+            return Err(Error::Incomplete);
+        }
+    
+        let data_length = 1 + buffer[0] as usize;
+        get_frame_length_from_data_length(data_length)
     }
-
-    let data_length = 1 + buffer[0] as usize;
-    get_frame_length_from_data_length(data_length)
 }
 
 const fn get_frame_length_from_data_length(data_length: usize) -> Result<usize, Error> {
@@ -39,13 +46,13 @@ const fn get_frame_length_from_data_length(data_length: usize) -> Result<usize, 
         + full_block_count * (OTHER_BLOCK_MAX_DATA_LENGTH + 2)
         + last_block_frame_length;
 
-    debug_assert!(frame_length <= MAX_FRAME_SIZE);
+    debug_assert!(frame_length <= FFA::FRAME_MAX);
 
     Ok(frame_length)
 }
 
 pub(crate) fn read(buffer: &[u8]) -> Result<Vec<u8>, Error> {
-    let frame_length = get_frame_length(buffer)?;
+    let frame_length = FFA::get_frame_length(buffer)?;
     if buffer.len() < frame_length {
         return Err(Error::Incomplete);
     }

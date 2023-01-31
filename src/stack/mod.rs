@@ -63,16 +63,12 @@ pub enum WriteError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum FrameFormat {
-    FFA,
-    FFB,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Channel {
-    /// Mode C.
-    ModeC(FrameFormat),
-    /// Mode T. Frame is "three out of six" encoded and uses frame format A.
+    /// Mode C FFA
+    ModeCFFA,
+    /// Mode C FFB
+    ModeCFFB,
+    /// Mode T FFA. Frame is "three out of six" encoded.
     ModeT,
 }
 
