@@ -1,4 +1,4 @@
-use crate::stack::{phl, Channel, ReadError, Rssi};
+use crate::stack::{phl, Channel, Rssi};
 use alloc::boxed::Box;
 use futures::Stream;
 use futures_async_stream::stream;

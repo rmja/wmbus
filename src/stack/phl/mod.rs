@@ -57,7 +57,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
                 let frame_length = 2 + ffb::get_frame_length(&buffer[2..])?;
                 Ok((Channel::ModeC(FrameFormat::FFB), frame_length))
             }
-            _ => Err(Error::InvalidSyncword.into()),
+            _ => Err(Error::InvalidSyncword),
         }
     } else if buffer[1] == 0x44 {
         // This is very likely a ModeC FFB frame where we have synchronized on the last 16 bits of its syncword 543D_543D.
@@ -78,7 +78,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
             // It seems as if the first block was in fact 3oo6 encoded
 
             if is_valid_crc(&block) {
-                let frame_length = ffa::get_frame_length(&buffer)?;
+                let frame_length = ffa::get_frame_length(buffer)?;
                 return Ok((Channel::ModeT, frame_length));
             }
         }
