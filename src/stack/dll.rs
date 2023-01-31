@@ -1,6 +1,6 @@
 use crate::address::WMBusAddress;
 
-use super::{Layer, ReadError, WriteError, Writer};
+use super::{Layer, ReadError, WriteError, Writer, Packet};
 
 const HEADER_LENGTH: usize = 10;
 
@@ -35,7 +35,7 @@ impl<A: Layer> Dll<A> {
 }
 
 impl<A: Layer> Layer for Dll<A> {
-    fn read(&self, packet: &mut super::Packet, buffer: &[u8]) -> Result<(), ReadError> {
+    fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
         if buffer.len() < HEADER_LENGTH {
             return Err(Error::Incomplete)?;
         }
@@ -49,7 +49,7 @@ impl<A: Layer> Layer for Dll<A> {
         self.above.read(packet, &buffer[HEADER_LENGTH..])
     }
 
-    fn write(&self, _writer: &mut impl Writer, _packet: &super::Packet) -> Result<(), WriteError> {
+    fn write<const N: usize>(&self, _writer: &mut impl Writer, _packet: &Packet<N>) -> Result<(), WriteError> {
         todo!()
     }
 }

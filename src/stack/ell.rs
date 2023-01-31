@@ -64,7 +64,7 @@ impl EllFields {
 }
 
 impl<A: Layer> Layer for Ell<A> {
-    fn read(&self, packet: &mut Packet, buffer: &[u8]) -> Result<(), ReadError> {
+    fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
         let mut offset = 0;
         if !buffer.is_empty() {
             if let Some(header_length) = header_length(buffer[0]) {
@@ -106,7 +106,7 @@ impl<A: Layer> Layer for Ell<A> {
         self.above.read(packet, &buffer[offset..])
     }
 
-    fn write(&self, _writer: &mut impl Writer, _packet: &Packet) -> Result<(), WriteError> {
+    fn write<const N: usize>(&self, _writer: &mut impl Writer, _packet: &Packet<N>) -> Result<(), WriteError> {
         todo!()
     }
 }

@@ -1,5 +1,4 @@
 use crate::stack::{phl, Channel, Rssi};
-use alloc::boxed::Box;
 use futures::Stream;
 use futures_async_stream::stream;
 
@@ -86,7 +85,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
         Ok(self.receive_stream())
     }
 
-    #[stream(boxed_local, item = Frame<Transceiver::Timestamp>)]
+    #[stream(item = Frame<Transceiver::Timestamp>)]
     async fn receive_stream(&mut self) {
         loop {
             // Wait for frame to be detected

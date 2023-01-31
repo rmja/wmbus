@@ -103,15 +103,14 @@ impl<A: Layer> Phl<A> {
 }
 
 impl<A: Layer> Layer for Phl<A> {
-    fn read(&self, packet: &mut Packet, buffer: &[u8]) -> Result<(), ReadError> {
+    fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
         let payload = match packet.channel {
             Channel::ModeT => {
                 let mut symbols = (buffer.len() * 8) / 6;
                 symbols &= !1; // The number of symbols must be even
                 let buffer_bits = buffer.view_bits::<Msb0>();
                 let encoded = &buffer_bits[..6 * symbols];
-                let decoded =
-                    ThreeOutOfSix::decode(encoded).map_err(Error::ThreeOutOfSix)?;
+                let decoded = ThreeOutOfSix::decode(encoded).map_err(Error::ThreeOutOfSix)?;
                 ffa::read(&decoded)?
             }
             Channel::ModeC(FrameFormat::FFA) => ffa::read(buffer)?,
@@ -121,7 +120,11 @@ impl<A: Layer> Layer for Phl<A> {
         self.above.read(packet, &payload)
     }
 
-    fn write(&self, _writer: &mut impl Writer, _packet: &Packet) -> Result<(), WriteError> {
+    fn write<const N: usize>(
+        &self,
+        _writer: &mut impl Writer,
+        _packet: &Packet<N>,
+    ) -> Result<(), WriteError> {
         todo!()
     }
 }
