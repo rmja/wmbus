@@ -1,7 +1,7 @@
-use crate::stack::ReadError;
 use alloc::vec::Vec;
 
 use super::is_valid_crc;
+use super::Error;
 
 const FIRST_BLOCK_DATA_LENGTH: usize = 1 + 1 + 2 + 6;
 const OTHER_BLOCK_MAX_DATA_LENGTH: usize = 16;
@@ -10,18 +10,18 @@ const MAX_DATA_LENGTH: usize = 256;
 const MAX_BLOCK_COUNT: usize = 17; // 10 + (1 + 15) + 14 * 16 + 6 = 256
 pub const MAX_FRAME_SIZE: usize = MAX_DATA_LENGTH + 2 * MAX_BLOCK_COUNT;
 
-pub const fn get_frame_length(buffer: &[u8]) -> Result<usize, ReadError> {
+pub const fn get_frame_length(buffer: &[u8]) -> Result<usize, Error> {
     if buffer.is_empty() {
-        return Err(ReadError::NotEnoughBytes);
+        return Err(Error::Incomplete);
     }
 
     let data_length = 1 + buffer[0] as usize;
     get_frame_length_from_data_length(data_length)
 }
 
-const fn get_frame_length_from_data_length(data_length: usize) -> Result<usize, ReadError> {
+const fn get_frame_length_from_data_length(data_length: usize) -> Result<usize, Error> {
     if data_length < MIN_DATA_LENGTH {
-        return Err(ReadError::PhlInvalidLength);
+        return Err(Error::InvalidLength);
     }
 
     let other_data_length = data_length - FIRST_BLOCK_DATA_LENGTH;
@@ -44,10 +44,10 @@ const fn get_frame_length_from_data_length(data_length: usize) -> Result<usize, 
     Ok(frame_length)
 }
 
-pub(crate) fn read(buffer: &[u8]) -> Result<Vec<u8>, ReadError> {
+pub(crate) fn read(buffer: &[u8]) -> Result<Vec<u8>, Error> {
     let frame_length = get_frame_length(buffer)?;
     if buffer.len() < frame_length {
-        return Err(ReadError::NotEnoughBytes);
+        return Err(Error::Incomplete);
     }
 
     let data_length = 1 + buffer[0] as usize;
@@ -57,7 +57,7 @@ pub(crate) fn read(buffer: &[u8]) -> Result<Vec<u8>, ReadError> {
 
     // First block
     if !is_valid_crc(first_block) {
-        return Err(ReadError::PhlCrcError(0));
+        return Err(Error::CrcBlock(0));
     }
     data.extend_from_slice(&first_block[..first_block.len() - 2]);
 
@@ -67,7 +67,7 @@ pub(crate) fn read(buffer: &[u8]) -> Result<Vec<u8>, ReadError> {
         .enumerate()
     {
         if !is_valid_crc(block) {
-            return Err(ReadError::PhlCrcError(1 + index));
+            return Err(Error::CrcBlock(1 + index));
         }
         data.extend_from_slice(&block[..block.len() - 2]);
     }

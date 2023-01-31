@@ -32,6 +32,21 @@ pub enum EllFields {
     },
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    Incomplete,
+    BcdConversion,
+}
+
+impl From<Error> for ReadError {
+    fn from(value: Error) -> Self {
+        match value {
+            Error::Incomplete => ReadError::Incomplete,
+            e => ReadError::Ell(e),
+        }
+    }
+}
+
 impl<A: Layer> Ell<A> {
     pub const fn new(above: A) -> Self {
         Self { above }
@@ -55,7 +70,7 @@ impl<A: Layer> Layer for Ell<A> {
         if !buffer.is_empty() {
             if let Some(header_length) = header_length(buffer[0]) {
                 if buffer.len() < header_length {
-                    return Err(ReadError::NotEnoughBytes);
+                    return Err(Error::Incomplete)?;
                 }
                 packet.ell = match buffer[0] {
                     0x8C => Some(EllFields::Short {
@@ -72,13 +87,13 @@ impl<A: Layer> Layer for Ell<A> {
                         cc: buffer[1],
                         acc: buffer[2],
                         dest: WMBusAddress::from_bytes(buffer[3..11].try_into().unwrap())
-                            .map_err(|_| ReadError::BcdConversionError)?,
+                            .map_err(|_| Error::BcdConversion)?,
                     }),
                     0x8F => Some(EllFields::LongDest {
                         cc: buffer[1],
                         acc: buffer[2],
                         dest: WMBusAddress::from_bytes(buffer[3..11].try_into().unwrap())
-                            .map_err(|_| ReadError::BcdConversionError)?,
+                            .map_err(|_| Error::BcdConversion)?,
                         sn: u32::from_le_bytes(buffer[11..15].try_into().unwrap()),
                         payload_crc: Some(u16::from_le_bytes(buffer[15..17].try_into().unwrap())),
                     }),

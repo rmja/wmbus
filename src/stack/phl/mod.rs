@@ -20,9 +20,27 @@ pub struct Phl<A: Layer> {
 
 pub struct PhlFields;
 
-pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), ReadError> {
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    Incomplete,
+    InvalidSyncword,
+    InvalidThreeOutOfSix,
+    InvalidLength,
+    CrcBlock(usize),
+}
+
+impl From<Error> for ReadError {
+    fn from(value: Error) -> Self {
+        match value {
+            Error::Incomplete => ReadError::Incomplete,
+            e => ReadError::Phl(e),
+        }
+    }
+}
+
+pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
     if buffer.len() < DERIVE_FRAME_LENGTH_MIN {
-        return Err(ReadError::NotEnoughBytes);
+        return Err(Error::Incomplete);
     }
 
     if buffer[0] == 0x54 {
@@ -39,7 +57,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), ReadError>
                 let frame_length = 2 + ffb::get_frame_length(&buffer[2..])?;
                 Ok((Channel::ModeC(FrameFormat::FFB), frame_length))
             }
-            _ => Err(ReadError::PhlInvalidSyncword),
+            _ => Err(Error::InvalidSyncword.into()),
         }
     } else if buffer[1] == 0x44 {
         // This is very likely a ModeC FFB frame where we have synchronized on the last 16 bits of its syncword 543D_543D.
@@ -52,7 +70,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), ReadError>
 
         // The first block is 12 bytes including its CRC - it is 3oo6 encoded so we actually need 18 bytes to proceed
         if buffer.len() < (12 * 6) / 4 {
-            return Err(ReadError::NotEnoughBytes);
+            return Err(Error::Incomplete);
         }
 
         let bits = buffer.view_bits();
@@ -72,8 +90,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), ReadError>
         Ok((Channel::ModeC(FrameFormat::FFB), frame_length))
     } else {
         let bits = buffer.view_bits();
-        let buffer =
-            ThreeOutOfSix::decode(&bits[..12]).map_err(|_| ReadError::PhlInvalidThreeOutOfSix)?;
+        let buffer = ThreeOutOfSix::decode(&bits[..12]).map_err(|_| Error::InvalidThreeOutOfSix)?;
         assert_eq!(1, buffer.len());
         let frame_length = ffa::get_frame_length(&buffer)?;
         Ok((Channel::ModeT, frame_length))
@@ -94,8 +111,8 @@ impl<A: Layer> Layer for Phl<A> {
                 symbols &= !1; // The number of symbols must be even
                 let buffer_bits = buffer.view_bits::<Msb0>();
                 let encoded = &buffer_bits[..6 * symbols];
-                let decoded = ThreeOutOfSix::decode(encoded)
-                    .map_err(|_| ReadError::PhlInvalidThreeOutOfSix)?;
+                let decoded =
+                    ThreeOutOfSix::decode(encoded).map_err(|_| Error::InvalidThreeOutOfSix)?;
                 ffa::read(&decoded)?
             }
             Channel::ModeC(FrameFormat::FFA) => ffa::read(buffer)?,
@@ -133,7 +150,7 @@ mod tests {
             derive_frame_length(&[0x54, 0x3D, 0x4E]).unwrap()
         );
         assert_eq!(
-            Err(ReadError::NotEnoughBytes),
+            Err(Error::Incomplete),
             derive_frame_length(&[0x4E, 0x44, 0x2D])
         );
         assert_eq!(

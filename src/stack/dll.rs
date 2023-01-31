@@ -14,6 +14,21 @@ pub struct DllFields {
     pub address: WMBusAddress,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    Incomplete,
+    BcdConversion,
+}
+
+impl From<Error> for ReadError {
+    fn from(value: Error) -> Self {
+        match value {
+            Error::Incomplete => ReadError::Incomplete,
+            e => ReadError::Dll(e),
+        }
+    }
+}
+
 impl<A: Layer> Dll<A> {
     pub const fn new(above: A) -> Self {
         Self { above }
@@ -23,13 +38,13 @@ impl<A: Layer> Dll<A> {
 impl<A: Layer> Layer for Dll<A> {
     fn read(&self, packet: &mut super::Packet, buffer: &[u8]) -> Result<(), ReadError> {
         if buffer.len() < HEADER_LENGTH {
-            return Err(ReadError::NotEnoughBytes);
+            return Err(Error::Incomplete)?;
         }
 
         packet.dll = Some(DllFields {
             control: buffer[1],
             address: WMBusAddress::from_bytes(buffer[2..10].try_into().unwrap())
-                .map_err(|_| ReadError::BcdConversionError)?,
+                .map_err(|_| Error::BcdConversion)?,
         });
 
         self.above.read(packet, &buffer[HEADER_LENGTH..])

@@ -119,7 +119,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                                 frame.length = Some(length);
                                 frame.rssi = Some(self.transceiver.get_rssi().await.unwrap());
                             }
-                            Err(ReadError::NotEnoughBytes) => {
+                            Err(phl::Error::Incomplete) => {
                                 // We need more bytes to derive the frame length
                                 continue;
                             }

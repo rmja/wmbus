@@ -4,6 +4,7 @@ pub mod ell;
 pub mod phl;
 
 use alloc::vec::Vec;
+use core::fmt::Debug;
 
 /// The Wireless M-Bus protocol stack
 pub struct Stack<A: Layer> {
@@ -57,16 +58,10 @@ impl Packet {
 
 #[derive(Debug, PartialEq)]
 pub enum ReadError {
-    NotEnoughBytes,
-    PhlInvalidSyncword,
-    PhlInvalidThreeOutOfSix,
-    PhlInvalidLength,
-    PhlCrcError(usize),
-    BcdConversionError,
-    MBalCrcError,
-    MBalControlError,
-    MBalAddressError,
-    MBalCommandError,
+    Incomplete,
+    Phl(phl::Error),
+    Dll(dll::Error),
+    Ell(ell::Error),
 }
 
 impl Stack<ell::Ell<apl::Apl>> {
