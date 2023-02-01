@@ -77,6 +77,7 @@ pub enum Channel {
 }
 
 impl<const N: usize> Packet<N> {
+    /// Create a new empty packet
     pub const fn new(channel: Channel) -> Self {
         Self {
             rssi: None,
@@ -88,19 +89,16 @@ impl<const N: usize> Packet<N> {
         }
     }
 
+    /// Create a new packet with a given payload
     pub fn with_apl(channel: Channel, apl: [u8; N]) -> Self {
-        let mut packet = Self {
+        Self {
             rssi: None,
             channel,
             phl: None,
             dll: None,
             ell: None,
-            apl: Vec::new(),
-        };
-
-        packet.apl.extend_from_slice(&apl).unwrap();
-
-        packet
+            apl: Vec::from_slice(&apl).unwrap(),
+        }
     }
 }
 
