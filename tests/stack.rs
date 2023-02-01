@@ -1,4 +1,5 @@
 use assert_hex::assert_eq_hex;
+use bitvec::prelude::*;
 use wmbus::{
     modet::threeoutofsix::ThreeOutOfSix,
     stack::{
@@ -91,9 +92,10 @@ fn can_read_modet() {
         0x7D, 0x48, 0xB1, 0x45, 0x92, 0x72, 0x38, 0x61, 0x46, 0xF7, 0x8C, 0x77, 0x66, 0xD5, 0x19, 0xFC, 0x44, 0x49,
         0x99, 0x3A, 0xDA, 0x5A, 0xAD, 0x95, 0xA5,
     ];
-    let mut encoded = ThreeOutOfSix::encode(frame);
-    encoded.resize_with(8 * ((encoded.len() + 7) / 8), |_| false); // Pad zeroes to byte align
-    let encoded = encoded.as_raw_slice();
+    let mut encode_buf = bitarr![u8, Msb0; 0; 91 * 2 * 6];
+    let encoded_bits = ThreeOutOfSix::encode(&mut encode_buf, frame).unwrap();
+    let encoded_bytes = (encoded_bits + 7) / 8; // Round up to nearest byte boundary
+    let encoded = &encode_buf.as_raw_slice()[..encoded_bytes];
 
     // When
     let packet: Packet<69> = stack.read(encoded, Channel::ModeT).unwrap();

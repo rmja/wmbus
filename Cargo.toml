@@ -10,14 +10,12 @@ keywords = ["en13757", "oms", "wmbus"]
 description = "Wireless M-Bus (EN13757) protocol"
 
 [features]
-default = []
 alloc = []
 ctrl = ["futures", "futures-async-stream"]
-all = ["ctrl", "alloc"]
 
 [dependencies]
 bcd = { git = "https://github.com/rmja/bcd" }
-bitvec = { version = "1", default-features = false, features = ["alloc"] }
+bitvec = { version = "1", default-features = false }
 crc = "2.0"
 futures = { version = "0.3.0", default-features = false, optional = true }
 futures-async-stream = { version = "0.2", optional = true }
@@ -27,4 +25,5 @@ num-traits = { version = "0.2", default-features = false }
 
 [dev-dependencies]
 assert_hex = "0.2"
+bitvec = { version = "1", default-features = false, features = ["alloc"] }
 mockall = "0.11"

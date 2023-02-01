@@ -6,8 +6,6 @@
 #![feature(let_chains)]
 #![feature(generic_const_exprs)]
 
-extern crate alloc;
-
 #[macro_use]
 extern crate num_derive;
 
@@ -17,6 +15,9 @@ pub mod ctrl;
 pub mod modec;
 pub mod modet;
 pub mod stack;
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 #[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
 #[repr(u16)]

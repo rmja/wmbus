@@ -84,9 +84,12 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
             return Err(Error::Incomplete);
         }
 
+        let mut block = [0; 12];
         let bits = buffer.view_bits();
-        if let Ok(block) = ThreeOutOfSix::decode(&bits[..12 * 6]) {
+        if let Ok(decoded) = ThreeOutOfSix::decode(&mut block, &bits[..12 * 6]) {
             // It seems as if the first block was in fact 3oo6 encoded
+
+            assert_eq!(12, decoded);
 
             if is_valid_crc(&block) {
                 let frame_length = FFA::get_frame_length(buffer)?;
@@ -100,10 +103,11 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
         let frame_length = FFB::get_frame_length(buffer)?;
         Ok((Channel::ModeCFFB, frame_length))
     } else {
+        let mut l_field = [0; 12];
         let bits = buffer.view_bits();
-        let buffer = ThreeOutOfSix::decode(&bits[..12]).map_err(Error::ThreeOutOfSix)?;
-        assert_eq!(1, buffer.len());
-        let frame_length = FFA::get_frame_length(&buffer)?;
+        let decoded = ThreeOutOfSix::decode(&mut l_field, &bits[..12]).map_err(Error::ThreeOutOfSix)?;
+        assert_eq!(1, decoded);
+        let frame_length = FFA::get_frame_length(&l_field)?;
         Ok((Channel::ModeT, frame_length))
     }
 }
@@ -120,10 +124,11 @@ impl<A: Layer> Layer for Phl<A> {
             Channel::ModeT => {
                 let mut symbols = (buffer.len() * 8) / 6;
                 symbols &= !1; // The number of symbols must be even
+                let mut decode_buf = [0; FFA::FRAME_MAX];
                 let buffer_bits = buffer.view_bits::<Msb0>();
                 let encoded = &buffer_bits[..6 * symbols];
-                let decoded = ThreeOutOfSix::decode(encoded).map_err(Error::ThreeOutOfSix)?;
-                let payload = FFA::read(&decoded)?;
+                let decoded = ThreeOutOfSix::decode(&mut decode_buf, encoded).map_err(Error::ThreeOutOfSix)?;
+                let payload = FFA::read(&decode_buf[..decoded])?;
                 self.above.read(packet, &payload)
             }
             Channel::ModeCFFA => {

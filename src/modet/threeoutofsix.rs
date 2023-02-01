@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use bitvec::{field::BitField, prelude::*};
 
 pub struct ThreeOutOfSix;
@@ -18,54 +17,68 @@ const DECODE_TABLE: [i8; 0x40] = [
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    InvalidInputLength,
-    InvalidSymbol,
-    Write,
+    /// The provided buffer is not sufficiently largo to include the result
+    Capacity,
+    /// The input length is invalid
+    InputLength,
+    /// The decode of a symbol failed
+    Symbol(usize),
 }
 
 impl ThreeOutOfSix {
-    pub fn encode(source: &[u8]) -> BitVec<u8, Msb0> {
-        let mut encoded = BitVec::with_capacity(source.len() * 2 * 6);
-
+    /// 3oo6 encode into the provided buffer and returns the number of bits encoded
+    pub fn encode(buffer: &mut BitSlice<u8, Msb0>, source: &[u8]) -> Result<usize, Error> {
+        if buffer.len() < source.len() * 2 * 6 {
+            return Err(Error::Capacity);
+        }
+        
+        let mut written = 0;
         for byte in source {
             for nibble in [byte >> 4, byte & 0x0F] {
                 let symbol = ENCODE_TABLE[nibble as usize];
-                encoded.push(symbol & 0x20 != 0);
-                encoded.push(symbol & 0x10 != 0);
-                encoded.push(symbol & 0x08 != 0);
-                encoded.push(symbol & 0x04 != 0);
-                encoded.push(symbol & 0x02 != 0);
-                encoded.push(symbol & 0x01 != 0);
+                buffer.set(written, symbol & 0x20 != 0);
+                written += 1;
+                buffer.set(written, symbol & 0x10 != 0);
+                written += 1;
+                buffer.set(written, symbol & 0x08 != 0);
+                written += 1;
+                buffer.set(written, symbol & 0x04 != 0);
+                written += 1;
+                buffer.set(written, symbol & 0x02 != 0);
+                written += 1;
+                buffer.set(written, symbol & 0x01 != 0);
+                written += 1;
             }
         }
 
-        encoded
+        Ok(written)
     }
 
-    pub fn decode<T: BitStore>(input: &BitSlice<T, Msb0>) -> Result<Vec<u8>, Error> {
+    pub fn decode<T: BitStore>(buffer: &mut [u8], input: &BitSlice<T, Msb0>) -> Result<usize, Error> {
         let symbols = input.chunks_exact(6);
         if !symbols.remainder().is_empty() || symbols.len() & 1 != 0 {
-            return Err(Error::InvalidInputLength);
+            return Err(Error::InputLength);
         }
 
-        let mut decoded = Vec::with_capacity(symbols.len() * 2);
+        let mut written = 0;
         let mut carry = None;
 
-        for symbol in symbols {
-            let index = symbol.load_be::<usize>();
-            let value = DECODE_TABLE[index];
+        for (index, symbol) in symbols.enumerate() {
+            let table_index = symbol.load_be::<usize>();
+            let value = DECODE_TABLE[table_index];
             if value == -1 {
-                return Err(Error::InvalidSymbol);
+                return Err(Error::Symbol(index));
             }
             let value = value as u8;
             if let Some(previous) = carry.take() {
-                decoded.push((previous << 4) | value);
+                buffer[written] = (previous << 4) | value;
+                written += 1;
             } else {
                 carry = Some(value);
             }
         }
 
-        Ok(decoded)
+        Ok(written)
     }
 }
 
@@ -83,7 +96,8 @@ pub mod tests {
             0x55, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF,
         ];
-        let encoded = ThreeOutOfSix::encode(&data);
+        let mut buffer = bitarr![u8, Msb0; 0; 800];
+        let encoded_bits = ThreeOutOfSix::encode(&mut buffer, &data).unwrap();
         let encoded_expected: Vec<u8> = vec![
             0x3a, 0x97, 0x1c, 0x6a, 0xc6, 0x56, 0x39, 0x33, 0x8d, 0x71, 0x92, 0xd6, 0x65, 0x66,
             0x8e, 0x8f, 0x1d, 0x34, 0x98, 0xe5, 0x9a, 0x96, 0x93, 0x63, 0x34, 0xd5, 0x9a, 0xd1,
@@ -94,15 +108,17 @@ pub mod tests {
         ];
         let expected: BitVec<u8, Msb0> = BitVec::from_vec(encoded_expected);
 
-        assert_eq_hex!(expected, encoded);
+        assert_eq_hex!(expected, buffer[..encoded_bits]);
     }
 
     #[test]
     pub fn can_encode_correctly_terminates() {
+        let mut buffer = bitarr![u8, Msb0; 0; 12];
         let data: [u8; 1] = [0x12];
-        let encoded = ThreeOutOfSix::encode(&data);
+        let encoded = ThreeOutOfSix::encode(&mut buffer, &data).unwrap();
 
-        assert_eq!(bitvec![0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0], encoded);
+        assert_eq!(12, encoded);
+        assert_eq!(bitvec![u8, Msb0; 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0], &buffer[..encoded]);
     }
 
     #[test]
@@ -113,8 +129,10 @@ pub mod tests {
             0x55, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF,
         ];
-        let encoded = ThreeOutOfSix::encode(&data);
-        let decoded = ThreeOutOfSix::decode(&encoded);
-        assert_eq!(data, decoded.unwrap());
+        let mut encode_buf = bitarr![u8, Msb0; 0; 800];
+        let encoded = ThreeOutOfSix::encode(&mut encode_buf, &data).unwrap();
+        let mut decode_buf = [0; 100];
+        let decoded = ThreeOutOfSix::decode(&mut decode_buf, &encode_buf[..encoded]).unwrap();
+        assert_eq!(data, decode_buf[..decoded]);
     }
 }
