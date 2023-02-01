@@ -43,7 +43,7 @@ impl Writer for alloc::vec::Vec<u8> {
 /// A Wireless M-Bus packet
 pub struct Packet<const N: usize = { phl::APL_MAX }> {
     pub rssi: Option<Rssi>,
-    pub channel: Channel,
+    pub mode: Mode,
     pub phl: Option<phl::PhlFields>,
     pub dll: Option<dll::DllFields>,
     pub ell: Option<ell::EllFields>,
@@ -67,7 +67,7 @@ pub enum WriteError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Channel {
+pub enum Mode {
     /// Mode C FFA
     ModeCFFA,
     /// Mode C FFB
@@ -78,10 +78,10 @@ pub enum Channel {
 
 impl<const N: usize> Packet<N> {
     /// Create a new empty packet
-    pub const fn new(channel: Channel) -> Self {
+    pub const fn new(mode: Mode) -> Self {
         Self {
             rssi: None,
-            channel,
+            mode,
             phl: None,
             dll: None,
             ell: None,
@@ -90,10 +90,10 @@ impl<const N: usize> Packet<N> {
     }
 
     /// Create a new packet with a given payload
-    pub fn with_apl(channel: Channel, apl: [u8; N]) -> Self {
+    pub fn with_apl(mode: Mode, apl: [u8; N]) -> Self {
         Self {
             rssi: None,
-            channel,
+            mode,
             phl: None,
             dll: None,
             ell: None,
@@ -131,9 +131,9 @@ impl<A: Layer> Stack<A> {
     pub fn read<const N: usize>(
         &self,
         buffer: &[u8],
-        channel: Channel,
+        mode: Mode,
     ) -> Result<Packet<N>, ReadError> {
-        let mut packet = Packet::new(channel);
+        let mut packet = Packet::new(mode);
         self.phl.read(&mut packet, buffer)?;
         Ok(packet)
     }

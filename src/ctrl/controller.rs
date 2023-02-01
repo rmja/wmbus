@@ -1,4 +1,4 @@
-use crate::stack::{phl, Channel, Rssi};
+use crate::stack::{phl, Mode, Rssi};
 use futures::Stream;
 use futures_async_stream::stream;
 
@@ -15,7 +15,7 @@ pub struct Frame<Timestamp> {
     pub rssi: Option<Rssi>,
     buffer: [u8; phl::FRAME_MAX],
     received: usize,
-    channel: Option<Channel>,
+    mode: Option<Mode>,
     length: Option<usize>,
 }
 
@@ -26,7 +26,7 @@ impl<Timestamp> const Default for Frame<Timestamp> {
             rssi: None,
             buffer: [0; phl::FRAME_MAX],
             received: 0,
-            channel: None,
+            mode: None,
             length: None,
         }
     }
@@ -37,8 +37,8 @@ impl<Timestamp> Frame<Timestamp> {
         &self.buffer[0..self.length.unwrap()]
     }
 
-    pub fn channel(&self) -> Channel {
-        self.channel.unwrap()
+    pub fn mode(&self) -> Mode {
+        self.mode.unwrap()
     }
 }
 
@@ -114,9 +114,9 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                     if frame.length.is_none() {
                         // Try and derive the frame length
                         match phl::derive_frame_length(&frame.buffer[..frame.received]) {
-                            Ok((channel, length)) => {
+                            Ok((mode, length)) => {
                                 self.transceiver.accept(&mut token, length).await.unwrap();
-                                frame.channel = Some(channel);
+                                frame.mode = Some(mode);
                                 frame.length = Some(length);
                                 frame.rssi = Some(self.transceiver.get_rssi().await.unwrap());
                             }

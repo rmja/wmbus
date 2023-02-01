@@ -4,7 +4,7 @@ use wmbus::{
     modet::threeoutofsix::ThreeOutOfSix,
     stack::{
         phl::{FrameFormat, FFA, FFB},
-        Channel, Packet, Stack,
+        Mode, Packet, Stack,
     },
     DeviceType, ManufacturerCode,
 };
@@ -24,7 +24,7 @@ fn can_read_modec_ffa() {
     ];
 
     // When
-    let packet: Packet<69> = stack.read(frame, Channel::ModeCFFA).unwrap();
+    let packet: Packet<69> = stack.read(frame, Mode::ModeCFFA).unwrap();
 
     // Then
     assert_eq!(frame.len(), FFA::get_frame_length(frame).unwrap());
@@ -57,7 +57,7 @@ fn can_read_modec_ffb() {
     ];
 
     // When
-    let packet: Packet<8> = stack.read(frame, Channel::ModeCFFB).unwrap();
+    let packet: Packet<8> = stack.read(frame, Mode::ModeCFFB).unwrap();
 
     // Then
     assert_eq!(frame.len(), FFB::get_frame_length(frame).unwrap());
@@ -98,7 +98,7 @@ fn can_read_modet() {
     let encoded = &encode_buf.as_raw_slice()[..encoded_bytes];
 
     // When
-    let packet: Packet<69> = stack.read(encoded, Channel::ModeT).unwrap();
+    let packet: Packet<69> = stack.read(encoded, Mode::ModeT).unwrap();
 
     // Then
     assert_eq!(frame.len(), FFA::get_frame_length(frame).unwrap());

@@ -9,7 +9,7 @@ use crate::modet::threeoutofsix::{self, ThreeOutOfSix};
 
 pub use self::{ffa::FFA, ffb::FFB};
 
-use super::{Channel, Layer, Packet, ReadError, WriteError, Writer};
+use super::{Mode, Layer, Packet, ReadError, WriteError, Writer};
 
 const CRC: Crc<u16> = Crc::<u16>::new(&CRC_16_EN_13757);
 
@@ -51,7 +51,7 @@ pub trait FrameFormat {
     fn read(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error>;
 }
 
-pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
+pub fn derive_frame_length(buffer: &[u8]) -> Result<(Mode, usize), Error> {
     if buffer.len() < DERIVE_FRAME_LENGTH_MIN {
         return Err(Error::Incomplete);
     }
@@ -63,12 +63,12 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
             // Frame format A
             0xCD => {
                 let frame_length = 2 + FFA::get_frame_length(&buffer[2..])?;
-                Ok((Channel::ModeCFFA, frame_length))
+                Ok((Mode::ModeCFFA, frame_length))
             }
             // Frame format B
             0x3D => {
                 let frame_length = 2 + FFB::get_frame_length(&buffer[2..])?;
-                Ok((Channel::ModeCFFB, frame_length))
+                Ok((Mode::ModeCFFB, frame_length))
             }
             _ => Err(Error::Syncword),
         }
@@ -95,7 +95,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
 
             if is_valid_crc(&block) {
                 let frame_length = FFA::get_frame_length(buffer)?;
-                return Ok((Channel::ModeT, frame_length));
+                return Ok((Mode::ModeT, frame_length));
             }
         }
 
@@ -103,14 +103,14 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Channel, usize), Error> {
         // Assume ModeC FFB
 
         let frame_length = FFB::get_frame_length(buffer)?;
-        Ok((Channel::ModeCFFB, frame_length))
+        Ok((Mode::ModeCFFB, frame_length))
     } else {
         let mut l_field = [0; 12];
         let bits = buffer.view_bits();
         let decoded = ThreeOutOfSix::decode(&mut l_field, &bits[..12]).map_err(Error::ThreeOutOfSix)?;
         assert_eq!(1, decoded);
         let frame_length = FFA::get_frame_length(&l_field)?;
-        Ok((Channel::ModeT, frame_length))
+        Ok((Mode::ModeT, frame_length))
     }
 }
 
@@ -122,8 +122,8 @@ impl<A: Layer> Phl<A> {
 
 impl<A: Layer> Layer for Phl<A> {
     fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
-        match packet.channel {
-            Channel::ModeT => {
+        match packet.mode {
+            Mode::ModeT => {
                 let mut symbols = (buffer.len() * 8) / 6;
                 symbols &= !1; // The number of symbols must be even
                 let mut decode_buf = [0; FFA::FRAME_MAX];
@@ -133,11 +133,11 @@ impl<A: Layer> Layer for Phl<A> {
                 let payload = FFA::read(&decode_buf[..decoded])?;
                 self.above.read(packet, &payload)
             }
-            Channel::ModeCFFA => {
+            Mode::ModeCFFA => {
                 let payload = FFA::read(buffer)?;
                 self.above.read(packet, &payload)
             }
-            Channel::ModeCFFB => {
+            Mode::ModeCFFB => {
                 let payload = FFB::read(buffer)?;
                 self.above.read(packet, &payload)
             }
@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn can_derive_frame_length() {
         assert_eq!(
-            (Channel::ModeCFFB, 2 + 1 + 0x4E),
+            (Mode::ModeCFFB, 2 + 1 + 0x4E),
             derive_frame_length(&[0x54, 0x3D, 0x4E]).unwrap()
         );
         assert_eq!(
@@ -180,7 +180,7 @@ mod tests {
             derive_frame_length(&[0x4E, 0x44, 0x2D])
         );
         assert_eq!(
-            (Channel::ModeCFFB, 1 + 0x4E),
+            (Mode::ModeCFFB, 1 + 0x4E),
             derive_frame_length(&[
                 0x4E, 0x44, 0x2D, 0x2C, 0x98, 0x27, 0x04, 0x67, 0x30, 0x04, 0x91, 0x53, 0x7A, 0xA6,
                 0x10, 0x40, 0x25, 0x6D
