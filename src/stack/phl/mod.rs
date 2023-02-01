@@ -9,7 +9,7 @@ use crate::modet::threeoutofsix::{self, ThreeOutOfSix};
 
 pub use self::{ffa::FFA, ffb::FFB};
 
-use super::{Mode, Layer, Packet, ReadError, WriteError, Writer};
+use super::{Layer, Mode, Packet, ReadError, WriteError, Writer};
 
 const CRC: Crc<u16> = Crc::<u16>::new(&CRC_16_EN_13757);
 
@@ -107,7 +107,8 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Mode, usize), Error> {
     } else {
         let mut l_field = [0; 12];
         let bits = buffer.view_bits();
-        let decoded = ThreeOutOfSix::decode(&mut l_field, &bits[..12]).map_err(Error::ThreeOutOfSix)?;
+        let decoded =
+            ThreeOutOfSix::decode(&mut l_field, &bits[..12]).map_err(Error::ThreeOutOfSix)?;
         assert_eq!(1, decoded);
         let frame_length = FFA::get_frame_length(&l_field)?;
         Ok((Mode::ModeT, frame_length))
@@ -129,7 +130,8 @@ impl<A: Layer> Layer for Phl<A> {
                 let mut decode_buf = [0; FFA::FRAME_MAX];
                 let buffer_bits = buffer.view_bits::<Msb0>();
                 let encoded = &buffer_bits[..6 * symbols];
-                let decoded = ThreeOutOfSix::decode(&mut decode_buf, encoded).map_err(Error::ThreeOutOfSix)?;
+                let decoded = ThreeOutOfSix::decode(&mut decode_buf, encoded)
+                    .map_err(Error::ThreeOutOfSix)?;
                 let payload = FFA::read(&decode_buf[..decoded])?;
                 self.above.read(packet, &payload)
             }

@@ -31,7 +31,7 @@ impl ThreeOutOfSix {
         if buffer.len() < source.len() * 2 * 6 {
             return Err(Error::Capacity);
         }
-        
+
         let mut written = 0;
         for byte in source {
             for nibble in [byte >> 4, byte & 0x0F] {
@@ -54,7 +54,10 @@ impl ThreeOutOfSix {
         Ok(written)
     }
 
-    pub fn decode<T: BitStore>(buffer: &mut [u8], input: &BitSlice<T, Msb0>) -> Result<usize, Error> {
+    pub fn decode<T: BitStore>(
+        buffer: &mut [u8],
+        input: &BitSlice<T, Msb0>,
+    ) -> Result<usize, Error> {
         let symbols = input.chunks_exact(6);
         if !symbols.remainder().is_empty() || symbols.len() & 1 != 0 {
             return Err(Error::InputLength);
@@ -118,7 +121,10 @@ pub mod tests {
         let encoded = ThreeOutOfSix::encode(&mut buffer, &data).unwrap();
 
         assert_eq!(12, encoded);
-        assert_eq!(bitvec![u8, Msb0; 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0], &buffer[..encoded]);
+        assert_eq!(
+            bitvec![u8, Msb0; 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0],
+            &buffer[..encoded]
+        );
     }
 
     #[test]

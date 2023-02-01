@@ -50,7 +50,7 @@ pub struct Packet<const N: usize = { phl::APL_MAX }> {
     pub apl: Vec<u8, N>,
 }
 
-pub type Rssi = i8;
+pub type Rssi = i16;
 
 #[derive(Debug, PartialEq)]
 pub enum ReadError {
@@ -128,11 +128,7 @@ impl Stack<apl::Apl> {
 
 impl<A: Layer> Stack<A> {
     /// Read a packet from a byte buffer
-    pub fn read<const N: usize>(
-        &self,
-        buffer: &[u8],
-        mode: Mode,
-    ) -> Result<Packet<N>, ReadError> {
+    pub fn read<const N: usize>(&self, buffer: &[u8], mode: Mode) -> Result<Packet<N>, ReadError> {
         let mut packet = Packet::new(mode);
         self.phl.read(&mut packet, buffer)?;
         Ok(packet)
