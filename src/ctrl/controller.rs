@@ -13,7 +13,7 @@ pub struct Controller<Transceiver: traits::Transceiver> {
 pub struct Frame<Timestamp> {
     pub timestamp: Option<Timestamp>,
     pub rssi: Option<Rssi>,
-    buffer: [u8; phl::MAX_FRAME_LENGTH],
+    buffer: [u8; phl::FRAME_MAX],
     received: usize,
     channel: Option<Channel>,
     length: Option<usize>,
@@ -24,7 +24,7 @@ impl<Timestamp> const Default for Frame<Timestamp> {
         Self {
             timestamp: None,
             rssi: None,
-            buffer: [0; phl::MAX_FRAME_LENGTH],
+            buffer: [0; phl::FRAME_MAX],
             received: 0,
             channel: None,
             length: None,

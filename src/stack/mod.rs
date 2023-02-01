@@ -41,13 +41,13 @@ impl Writer for alloc::vec::Vec<u8> {
 }
 
 /// A Wireless M-Bus packet
-pub struct Packet<const N: usize> {
+pub struct Packet<const N: usize = { phl::APL_MAX }> {
     pub rssi: Option<Rssi>,
     pub channel: Channel,
     pub phl: Option<phl::PhlFields>,
     pub dll: Option<dll::DllFields>,
     pub ell: Option<ell::EllFields>,
-    pub mbus_data: Vec<u8, N>,
+    pub apl: Vec<u8, N>,
 }
 
 pub type Rssi = i8;
@@ -84,8 +84,23 @@ impl<const N: usize> Packet<N> {
             phl: None,
             dll: None,
             ell: None,
-            mbus_data: Vec::new(),
+            apl: Vec::new(),
         }
+    }
+
+    pub fn with_apl(channel: Channel, apl: [u8; N]) -> Self {
+        let mut packet = Self {
+            rssi: None,
+            channel,
+            phl: None,
+            dll: None,
+            ell: None,
+            apl: Vec::new(),
+        };
+
+        packet.apl.extend_from_slice(&apl).unwrap();
+
+        packet
     }
 }
 

@@ -12,7 +12,7 @@ impl Apl {
 
 impl Layer for Apl {
     fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
-        packet.mbus_data = Vec::from_slice(buffer).map_err(|_| ReadError::Capacity)?;
+        packet.apl = Vec::from_slice(buffer).map_err(|_| ReadError::Capacity)?;
         Ok(())
     }
 
@@ -21,6 +21,6 @@ impl Layer for Apl {
         writer: &mut impl Writer,
         packet: &Packet<N>,
     ) -> Result<(), WriteError> {
-        writer.write(&packet.mbus_data)
+        writer.write(&packet.apl)
     }
 }

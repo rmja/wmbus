@@ -40,7 +40,7 @@ fn can_read_modec_ffa() {
 
     assert!(packet.ell.is_none());
 
-    let apl = packet.mbus_data;
+    let apl = packet.apl;
     assert_eq!(69, apl.len());
     assert_eq_hex!(0x7A, apl[0]);
     assert_eq_hex!(0xAD, *apl.last().unwrap());
@@ -73,7 +73,7 @@ fn can_read_modec_ffb() {
 
     assert!(packet.ell.is_none());
 
-    let apl = packet.mbus_data;
+    let apl = packet.apl;
     assert_eq!(8, apl.len());
     assert_eq_hex!(0xA0, apl[0]);
     assert_eq_hex!(0x06, *apl.last().unwrap());
@@ -114,7 +114,7 @@ fn can_read_modet() {
 
     assert!(packet.ell.is_none());
 
-    let apl = packet.mbus_data;
+    let apl = packet.apl;
     assert_eq!(69, apl.len());
     assert_eq_hex!(0x7A, apl[0]);
     assert_eq_hex!(0xAD, *apl.last().unwrap());

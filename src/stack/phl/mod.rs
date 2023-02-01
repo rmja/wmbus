@@ -14,7 +14,9 @@ use super::{Channel, Layer, Packet, ReadError, WriteError, Writer};
 const CRC: Crc<u16> = Crc::<u16>::new(&CRC_16_EN_13757);
 
 pub const DERIVE_FRAME_LENGTH_MIN: usize = 3;
-pub const MAX_FRAME_LENGTH: usize = FFA::FRAME_MAX;
+pub const APL_MAX: usize = FFA::APL_MAX;
+pub const DATA_MAX: usize = FFA::DATA_MAX;
+pub const FRAME_MAX: usize = FFA::FRAME_MAX;
 
 pub struct Phl<A: Layer> {
     above: A,
