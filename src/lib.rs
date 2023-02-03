@@ -29,6 +29,7 @@ pub enum ManufacturerCode {
     GAV = 0x1C36, // Carlo Gavazzi
     HYD = 0x2324, // Hydrometer
     KAM = 0x2C2D, // Kamstrup
+    KAW = 0x2C37, // Kamstrup Water
     LUG = 0x32A7, // Landis+Gyr GmbH
     SON = 0x4DEE, // Sontex
     TCH = 0x5068, // Techem
