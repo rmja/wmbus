@@ -98,7 +98,7 @@ fn can_read_modet() {
     let encoded = &encode_buf.as_raw_slice()[..encoded_bytes];
 
     // When
-    let packet: Packet<69> = stack.read(encoded, Mode::ModeT).unwrap();
+    let packet: Packet<69> = stack.read(encoded, Mode::ModeTMTO).unwrap();
 
     // Then
     assert_eq!(frame.len(), FFA::get_frame_length(frame).unwrap());

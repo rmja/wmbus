@@ -14,7 +14,7 @@ pub struct WMBusAddress {
 
 #[derive(Debug)]
 pub enum WMBusAddressError {
-    InvalidSerialNumberBcd,
+    SerialNumberBcd,
 }
 
 enum FieldLayout {
@@ -53,14 +53,14 @@ impl WMBusAddress {
             FieldLayout::Default => Ok(Self {
                 manufacturer_code: u16::from_le_bytes(value[0..2].try_into().unwrap()),
                 serial_number: parse_bcd_le(value[2..6].try_into().unwrap())
-                    .map_err(|_| WMBusAddressError::InvalidSerialNumberBcd)?,
+                    .map_err(|_| WMBusAddressError::SerialNumberBcd)?,
                 version: value[6],
                 device_type: value[7],
             }),
             FieldLayout::Diehl => Ok(Self {
                 manufacturer_code: u16::from_le_bytes(value[0..2].try_into().unwrap()),
                 serial_number: parse_bcd_le(value[4..8].try_into().unwrap())
-                    .map_err(|_| WMBusAddressError::InvalidSerialNumberBcd)?,
+                    .map_err(|_| WMBusAddressError::SerialNumberBcd)?,
                 version: value[2],
                 device_type: value[3],
             }),
@@ -68,7 +68,7 @@ impl WMBusAddress {
     }
 
     pub fn manufacturer_code(&self) -> Option<ManufacturerCode> {
-        num_traits::FromPrimitive::from_u16(self.manufacturer_code)
+        self.manufacturer_code.try_into().ok()
     }
 
     pub fn serial_number(&self) -> u32 {
@@ -80,7 +80,24 @@ impl WMBusAddress {
     }
 
     pub fn device_type(&self) -> Option<DeviceType> {
-        num_traits::FromPrimitive::from_u8(self.device_type)
+        self.device_type.try_into().ok()
+    }
+
+    pub fn get_bytes(&self) -> [u8; 8] {
+        let mut bytes = [0; 8];
+        bytes[0..2].copy_from_slice(self.manufacturer_code.to_le_bytes().as_ref());
+
+        let mut index = 2;
+        for byte in self.serial_number.into_iter().rev() {
+            bytes[index] = byte;
+            index += 1;
+        }
+
+        assert_eq!(6, index);
+        bytes[6] = self.version;
+        bytes[7] = self.device_type;
+
+        bytes
     }
 }
 

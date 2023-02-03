@@ -25,5 +25,5 @@ num-traits = { version = "0.2", default-features = false }
 
 [dev-dependencies]
 assert_hex = "0.2"
-bitvec = { version = "1", default-features = false, features = ["alloc"] }
+bitvec = "1"
 mockall = "0.11"

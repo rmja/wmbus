@@ -21,6 +21,18 @@ pub trait Layer {
     ) -> Result<(), WriteError>;
 }
 
+/// A Wireless M-Bus packet
+pub struct Packet<const N: usize = { phl::APL_MAX }> {
+    pub rssi: Option<Rssi>,
+    pub mode: Mode,
+    pub phl: Option<phl::PhlFields>,
+    pub dll: Option<dll::DllFields>,
+    pub ell: Option<ell::EllFields>,
+    pub apl: Vec<u8, N>,
+}
+
+pub type Rssi = i16;
+
 pub trait Writer {
     fn write(&mut self, buf: &[u8]) -> Result<(), WriteError>;
 }
@@ -39,18 +51,6 @@ impl Writer for alloc::vec::Vec<u8> {
         Ok(())
     }
 }
-
-/// A Wireless M-Bus packet
-pub struct Packet<const N: usize = { phl::APL_MAX }> {
-    pub rssi: Option<Rssi>,
-    pub mode: Mode,
-    pub phl: Option<phl::PhlFields>,
-    pub dll: Option<dll::DllFields>,
-    pub ell: Option<ell::EllFields>,
-    pub apl: Vec<u8, N>,
-}
-
-pub type Rssi = i16;
 
 #[derive(Debug, PartialEq)]
 pub enum ReadError {
@@ -72,8 +72,9 @@ pub enum Mode {
     ModeCFFA,
     /// Mode C FFB
     ModeCFFB,
-    /// Mode T FFA. Frame is "three out of six" encoded.
-    ModeT,
+    /// Mode T meter-to-other
+    /// Uses frame format A and frame is "three out of six" encoded.
+    ModeTMTO,
 }
 
 impl<const N: usize> Packet<N> {

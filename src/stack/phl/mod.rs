@@ -95,7 +95,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Mode, usize), Error> {
 
             if is_valid_crc(&block) {
                 let frame_length = FFA::get_frame_length(buffer)?;
-                return Ok((Mode::ModeT, frame_length));
+                return Ok((Mode::ModeTMTO, frame_length));
             }
         }
 
@@ -111,7 +111,7 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Mode, usize), Error> {
             ThreeOutOfSix::decode(&mut l_field, &bits[..12]).map_err(Error::ThreeOutOfSix)?;
         assert_eq!(1, decoded);
         let frame_length = FFA::get_frame_length(&l_field)?;
-        Ok((Mode::ModeT, frame_length))
+        Ok((Mode::ModeTMTO, frame_length))
     }
 }
 
@@ -124,7 +124,7 @@ impl<A: Layer> Phl<A> {
 impl<A: Layer> Layer for Phl<A> {
     fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
         match packet.mode {
-            Mode::ModeT => {
+            Mode::ModeTMTO => {
                 let mut symbols = (buffer.len() * 8) / 6;
                 symbols &= !1; // The number of symbols must be even
                 let mut decode_buf = [0; FFA::FRAME_MAX];

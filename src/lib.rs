@@ -19,6 +19,8 @@ pub mod stack;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+pub use address::WMBusAddress;
+
 #[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
 #[repr(u16)]
 pub enum ManufacturerCode {
@@ -47,4 +49,20 @@ pub enum DeviceType {
     Unknown = 0x0F,
     ColdWater = 0x16,
     Repeater = 0x32,
+}
+
+impl TryFrom<u16> for ManufacturerCode {
+    type Error = ();
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        num_traits::FromPrimitive::from_u16(value).ok_or(())
+    }
+}
+
+impl TryFrom<u8> for DeviceType {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        num_traits::FromPrimitive::from_u8(value).ok_or(())
+    }
 }
