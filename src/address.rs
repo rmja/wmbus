@@ -1,10 +1,10 @@
 use core::{convert::TryInto, fmt::Display};
 
-use bcd::{BcdError, BcdNumber};
+use nobcd::{BcdError, BcdNumber};
 
 use crate::{DeviceType, ManufacturerCode};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WMBusAddress {
     pub manufacturer_code: u16,
     pub serial_number: BcdNumber<4>,
@@ -41,7 +41,7 @@ impl WMBusAddress {
     ) -> Self {
         Self {
             manufacturer_code: manufacturer_code as u16,
-            serial_number: BcdNumber::from_u32(serial_number),
+            serial_number: BcdNumber::try_new(serial_number).unwrap(),
             version,
             device_type: device_type as u8,
         }
