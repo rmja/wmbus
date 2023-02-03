@@ -16,7 +16,7 @@ pub struct Frame<Timestamp> {
     buffer: [u8; phl::FRAME_MAX],
     received: usize,
     mode: Option<Mode>,
-    length: Option<usize>,
+    len: Option<usize>,
 }
 
 impl<Timestamp> const Default for Frame<Timestamp> {
@@ -27,14 +27,18 @@ impl<Timestamp> const Default for Frame<Timestamp> {
             buffer: [0; phl::FRAME_MAX],
             received: 0,
             mode: None,
-            length: None,
+            len: None,
         }
     }
 }
 
 impl<Timestamp> Frame<Timestamp> {
+    pub fn len(&self) -> usize {
+        self.len.unwrap()
+    }
+
     pub fn bytes(&self) -> &[u8] {
-        &self.buffer[0..self.length.unwrap()]
+        &self.buffer[0..self.len.unwrap()]
     }
 
     pub fn mode(&self) -> Mode {
@@ -111,13 +115,13 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
 
                     frame.received += received;
 
-                    if frame.length.is_none() {
+                    if frame.len.is_none() {
                         // Try and derive the frame length
                         match phl::derive_frame_length(&frame.buffer[..frame.received]) {
-                            Ok((mode, length)) => {
+                            Ok((mode, skip, length)) => {
                                 self.transceiver.accept(&mut token, length).await.unwrap();
                                 frame.mode = Some(mode);
-                                frame.length = Some(length);
+                                frame.len = Some(skip + length);
                                 frame.rssi = Some(self.transceiver.get_rssi().await.unwrap());
                             }
                             Err(phl::Error::Incomplete) => {
@@ -131,7 +135,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                         }
                     }
 
-                    if let Some(frame_length) = frame.length && frame.received >= frame_length {
+                    if let Some(frame_length) = frame.len && frame.received >= frame_length {
                             // Frame is fully received
                             yield frame;
                             break;

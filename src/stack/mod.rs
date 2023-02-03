@@ -53,6 +53,7 @@ impl Writer for alloc::vec::Vec<u8> {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ReadError {
     Incomplete,
     Capacity,
@@ -62,11 +63,13 @@ pub enum ReadError {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum WriteError {
     Capacity,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Mode {
     /// Mode C FFA
     ModeCFFA,
@@ -129,7 +132,7 @@ impl Stack<apl::Apl> {
 
 impl<A: Layer> Stack<A> {
     /// Read a packet from a byte buffer
-    pub fn read<const N: usize>(&self, buffer: &[u8], mode: Mode) -> Result<Packet<N>, ReadError> {
+    pub fn read(&self, buffer: &[u8], mode: Mode) -> Result<Packet, ReadError> {
         let mut packet = Packet::new(mode);
         self.phl.read(&mut packet, buffer)?;
         Ok(packet)
@@ -142,5 +145,27 @@ impl<A: Layer> Stack<A> {
         packet: &Packet<N>,
     ) -> Result<(), WriteError> {
         self.phl.write(writer, packet)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_read() {
+        let stack = Stack::default();
+
+        let frame = &[
+            0x54, 0x3d, 0x23, 0x44, 0x2d, 0x2c, 0x33, 0x66, 0x00, 0x00, 0x17, 0x16, 0x8d, 0x20,
+            0x86, 0x41, 0xce, 0x05, 0x26, 0x74, 0x7b, 0x1f, 0x09, 0x61, 0x17, 0x8c, 0xba, 0xf9,
+            0xa8, 0x8e, 0x58, 0x71, 0x45, 0x72, 0xed, 0x55, 0xe8, 0xd4,
+        ];
+        let (mode, skip, len) = phl::derive_frame_length(frame).unwrap();
+        assert_eq!(Mode::ModeCFFB, mode);
+        assert_eq!(2, skip);
+        assert_eq!(frame.len() - 2, len);
+        stack.read(frame, mode).unwrap();
+        stack.read(&frame[skip..], mode).unwrap();
     }
 }

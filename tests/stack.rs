@@ -4,7 +4,7 @@ use wmbus::{
     modet::threeoutofsix::ThreeOutOfSix,
     stack::{
         phl::{FrameFormat, FFA, FFB},
-        Mode, Packet, Stack,
+        Mode, Stack,
     },
     DeviceType, ManufacturerCode,
 };
@@ -24,7 +24,7 @@ fn can_read_modec_ffa() {
     ];
 
     // When
-    let packet: Packet<69> = stack.read(frame, Mode::ModeCFFA).unwrap();
+    let packet = stack.read(frame, Mode::ModeCFFA).unwrap();
 
     // Then
     assert_eq!(frame.len(), FFA::get_frame_length(frame).unwrap());
@@ -57,11 +57,43 @@ fn can_read_modec_ffb() {
     ];
 
     // When
-    let packet: Packet<8> = stack.read(frame, Mode::ModeCFFB).unwrap();
+    let packet = stack.read(frame, Mode::ModeCFFB).unwrap();
 
     // Then
     assert_eq!(frame.len(), FFB::get_frame_length(frame).unwrap());
 
+    let dll = packet.dll.unwrap();
+    assert_eq!(
+        ManufacturerCode::KAM,
+        dll.address.manufacturer_code().unwrap()
+    );
+    assert_eq!(12345678, dll.address.serial_number());
+    assert_eq_hex!(0x01, dll.address.version());
+    assert_eq!(DeviceType::Repeater, dll.address.device_type().unwrap());
+
+    assert!(packet.ell.is_none());
+
+    let apl = packet.apl;
+    assert_eq!(8, apl.len());
+    assert_eq_hex!(0xA0, apl[0]);
+    assert_eq_hex!(0x06, *apl.last().unwrap());
+}
+
+#[test]
+fn can_read_modec_ffb_presync() {
+    // Given
+    let stack = Stack::new();
+    #[rustfmt::skip]
+    let frame = &[
+        0x54, 0x3D,
+        0x13, 0x44, 0x2D, 0x2C, 0x78, 0x56, 0x34, 0x12, 0x01, 0x32,
+        0xA0, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xC3, 0xC0,
+    ];
+
+    // When
+    let packet = stack.read(frame, Mode::ModeCFFB).unwrap();
+
+    // Then
     let dll = packet.dll.unwrap();
     assert_eq!(
         ManufacturerCode::KAM,
@@ -98,7 +130,7 @@ fn can_read_modet() {
     let encoded = &encode_buf.as_raw_slice()[..encoded_bytes];
 
     // When
-    let packet: Packet<69> = stack.read(encoded, Mode::ModeTMTO).unwrap();
+    let packet = stack.read(encoded, Mode::ModeTMTO).unwrap();
 
     // Then
     assert_eq!(frame.len(), FFA::get_frame_length(frame).unwrap());

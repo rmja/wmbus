@@ -4,7 +4,7 @@ use nobcd::{BcdError, BcdNumber};
 
 use crate::{DeviceType, ManufacturerCode};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WMBusAddress {
     pub manufacturer_code: u16,
     pub serial_number: BcdNumber<4>,
