@@ -25,12 +25,13 @@ pub struct Phl<A: Layer> {
 pub struct PhlFields;
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     Incomplete,
     Syncword,
     ThreeOutOfSix(threeoutofsix::Error),
     InvalidLength,
-    CrcBlock(usize),
+    Crc(usize),
 }
 
 impl From<Error> for ReadError {
@@ -48,7 +49,7 @@ pub trait FrameFormat {
     const FRAME_MAX: usize;
 
     fn get_frame_length(buffer: &[u8]) -> Result<usize, Error>;
-    fn read(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error>;
+    fn trim_crc(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error>;
 }
 
 pub fn derive_frame_length(buffer: &[u8]) -> Result<(Mode, usize, usize), Error> {
@@ -132,7 +133,7 @@ impl<A: Layer> Layer for Phl<A> {
                 let encoded = &buffer_bits[..6 * symbols];
                 let decoded = ThreeOutOfSix::decode(&mut decode_buf, encoded)
                     .map_err(Error::ThreeOutOfSix)?;
-                let payload = FFA::read(&decode_buf[..decoded])?;
+                let payload = FFA::trim_crc(&decode_buf[..decoded])?;
                 self.above.read(packet, &payload)
             }
             Mode::ModeCFFA => {
@@ -140,7 +141,7 @@ impl<A: Layer> Layer for Phl<A> {
                     .starts_with(&[0x54, 0xCD])
                     .then_some(2)
                     .unwrap_or_default();
-                let payload = FFA::read(&buffer[offset..])?;
+                let payload = FFA::trim_crc(&buffer[offset..])?;
                 self.above.read(packet, &payload)
             }
             Mode::ModeCFFB => {
@@ -148,7 +149,7 @@ impl<A: Layer> Layer for Phl<A> {
                     .starts_with(&[0x54, 0x3D])
                     .then_some(2)
                     .unwrap_or_default();
-                let payload = FFB::read(&buffer[offset..])?;
+                let payload = FFB::trim_crc(&buffer[offset..])?;
                 self.above.read(packet, &payload)
             }
         }

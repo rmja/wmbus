@@ -30,7 +30,7 @@ impl FrameFormat for FFB {
         Ok(frame_length)
     }
 
-    fn read(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error> {
+    fn trim_crc(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error> {
         let frame_length = FFB::get_frame_length(buffer)?;
         if buffer.len() < frame_length {
             return Err(Error::Incomplete);
@@ -43,7 +43,7 @@ impl FrameFormat for FFB {
             .enumerate()
         {
             if !is_valid_crc(block) {
-                return Err(Error::CrcBlock(index));
+                return Err(Error::Crc(index));
             }
             data.extend_from_slice(&block[..block.len() - 2]).unwrap();
         }

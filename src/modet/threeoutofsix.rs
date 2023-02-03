@@ -16,6 +16,7 @@ const DECODE_TABLE: [i8; 0x40] = [
 ];
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// The provided buffer is not sufficiently largo to include the result
     Capacity,

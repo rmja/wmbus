@@ -26,7 +26,7 @@ impl FrameFormat for FFA {
         get_frame_length_from_data_length(data_length)
     }
 
-    fn read(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error> {
+    fn trim_crc(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error> {
         let frame_length = Self::get_frame_length(buffer)?;
         if buffer.len() < frame_length {
             return Err(Error::Incomplete);
@@ -36,7 +36,7 @@ impl FrameFormat for FFA {
 
         // First block
         if !is_valid_crc(first_block) {
-            return Err(Error::CrcBlock(0));
+            return Err(Error::Crc(0));
         }
 
         let mut data = Vec::from_slice(&first_block[..first_block.len() - 2]).unwrap();
@@ -47,7 +47,7 @@ impl FrameFormat for FFA {
             .enumerate()
         {
             if !is_valid_crc(block) {
-                return Err(Error::CrcBlock(1 + index));
+                return Err(Error::Crc(1 + index));
             }
             data.extend_from_slice(&block[..block.len() - 2]).unwrap();
         }

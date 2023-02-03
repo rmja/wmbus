@@ -16,6 +16,9 @@ pub mod modec;
 pub mod modet;
 pub mod stack;
 
+#[cfg(feature = "defmt")]
+mod defmt_impl;
+
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
