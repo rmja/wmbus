@@ -119,9 +119,10 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                         // Try and derive the frame length
                         match phl::derive_frame_length(&frame.buffer[..frame.received]) {
                             Ok((mode, skip, length)) => {
-                                self.transceiver.accept(&mut token, length).await.unwrap();
+                                let frame_len = skip + length;
+                                self.transceiver.accept(&mut token, frame_len).await.unwrap();
                                 frame.mode = Some(mode);
-                                frame.len = Some(skip + length);
+                                frame.len = Some(frame_len);
                                 frame.rssi = Some(self.transceiver.get_rssi().await.unwrap());
                             }
                             Err(phl::Error::Incomplete) => {
