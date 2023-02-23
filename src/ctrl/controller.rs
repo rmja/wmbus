@@ -1,49 +1,16 @@
-use crate::stack::{phl, Mode, Rssi};
+use crate::stack::phl;
 use futures::Stream;
 use futures_async_stream::stream;
 
-use super::traits::{self, RxToken};
+use super::{
+    traits::{self, RxToken},
+    Frame,
+};
 
 /// Wireless M-Bus Transceiver Controller
 pub struct Controller<Transceiver: traits::Transceiver> {
     transceiver: Transceiver,
     listening: bool,
-}
-
-pub struct Frame<Timestamp> {
-    pub timestamp: Option<Timestamp>,
-    pub rssi: Option<Rssi>,
-    buffer: [u8; phl::FRAME_MAX],
-    received: usize,
-    mode: Option<Mode>,
-    len: Option<usize>,
-}
-
-impl<Timestamp> const Default for Frame<Timestamp> {
-    fn default() -> Self {
-        Self {
-            timestamp: None,
-            rssi: None,
-            buffer: [0; phl::FRAME_MAX],
-            received: 0,
-            mode: None,
-            len: None,
-        }
-    }
-}
-
-impl<Timestamp> Frame<Timestamp> {
-    pub fn len(&self) -> usize {
-        self.len.unwrap()
-    }
-
-    pub fn bytes(&self) -> &[u8] {
-        &self.buffer[0..self.len.unwrap()]
-    }
-
-    pub fn mode(&self) -> Mode {
-        self.mode.unwrap()
-    }
 }
 
 impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
@@ -79,7 +46,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
     /// Note that the receiver is _not_ stopped when the stream is dropped, so idle() must be called manually after the stream is dropped.
     pub async fn receive<'a>(
         &'a mut self,
-    ) -> Result<impl Stream<Item = Frame<Transceiver::Timestamp>> + 'a, Transceiver::Error> {
+    ) -> Result<impl Stream<Item = Frame> + 'a, Transceiver::Error> {
         assert!(!self.listening);
 
         // Start the receiver on the chip
@@ -89,7 +56,7 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
         Ok(self.receive_stream())
     }
 
-    #[stream(item = Frame<Transceiver::Timestamp>)]
+    #[stream(item = Frame)]
     async fn receive_stream(&mut self) {
         loop {
             // Wait for frame to be detected
@@ -120,7 +87,10 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                         match phl::derive_frame_length(&frame.buffer[..frame.received]) {
                             Ok((mode, skip, length)) => {
                                 let frame_len = skip + length;
-                                self.transceiver.accept(&mut token, frame_len).await.unwrap();
+                                self.transceiver
+                                    .accept(&mut token, frame_len)
+                                    .await
+                                    .unwrap();
                                 frame.mode = Some(mode);
                                 frame.len = Some(frame_len);
                                 frame.rssi = Some(self.transceiver.get_rssi().await.unwrap());
