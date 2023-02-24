@@ -6,7 +6,7 @@ use mockall::automock;
 
 use crate::stack::Rssi;
 
-#[cfg_attr(test, automock(type Timestamp = core::time::Duration; type RxToken = stubs::RxTokenStub; type Error = ();))]
+#[cfg_attr(test, automock(type RxToken = stubs::RxTokenStub; type Error = ();))]
 pub trait Transceiver {
     type RxToken: RxToken;
     type Error: Debug;
@@ -61,13 +61,11 @@ pub mod stubs {
 
     use super::RxToken;
 
-    pub struct RxTokenStub {
-        timestamp: Instant,
-    }
+    pub struct RxTokenStub(pub Instant);
 
     impl RxToken for RxTokenStub {
         fn timestamp(&self) -> Instant {
-            Instant::now()
+            self.0
         }
     }
 }
