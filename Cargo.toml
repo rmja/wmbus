@@ -15,7 +15,7 @@ ctrl = ["embassy-time", "futures", "futures-async-stream"]
 
 [dependencies]
 bitvec = { version = "1", default-features = false }
-crc = "2.0"
+crc = "3"
 defmt = { version = "0.3", optional = true }
 embassy-time = { version = "0.1", optional = true }
 futures = { version = "0.3.0", default-features = false, optional = true }
