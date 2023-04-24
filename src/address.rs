@@ -41,7 +41,7 @@ impl WMBusAddress {
     ) -> Self {
         Self {
             manufacturer_code: manufacturer_code as u16,
-            serial_number: BcdNumber::try_new(serial_number).unwrap(),
+            serial_number: BcdNumber::new(serial_number).unwrap(),
             version,
             device_type: device_type as u8,
         }
@@ -147,7 +147,7 @@ fn parse_bcd_le(bytes_le: &[u8; 4]) -> Result<BcdNumber<4>, BcdError> {
     let mut bytes_be = [0; 4];
     bytes_be.copy_from_slice(bytes_le);
     bytes_be.reverse();
-    BcdNumber::<4>::try_from(bytes_be)
+    BcdNumber::<4>::from_bcd_bytes(bytes_be)
 }
 
 #[cfg(test)]
