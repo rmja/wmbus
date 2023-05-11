@@ -6,9 +6,11 @@ pub mod phl;
 use core::fmt::Debug;
 use heapless::Vec;
 
+pub const DEFAULT_APL_MAX: usize = phl::APL_MAX;
+
 /// The Wireless M-Bus protocol stack
 pub struct Stack<A: Layer> {
-    phl: phl::Phl<dll::Dll<A>>,
+    pub phl: phl::Phl<dll::Dll<A>>,
 }
 
 /// Layer trait
@@ -21,14 +23,28 @@ pub trait Layer {
     ) -> Result<(), WriteError>;
 }
 
+impl<T: Layer> Layer for &T {
+    fn read<const N: usize>(&self, packet: &mut Packet<N>, buffer: &[u8]) -> Result<(), ReadError> {
+        T::read(self, packet, buffer)
+    }
+
+    fn write<const N: usize>(
+        &self,
+        writer: &mut impl Writer,
+        packet: &Packet<N>,
+    ) -> Result<(), WriteError> {
+        T::write(self, writer, packet)
+    }
+}
+
 /// A Wireless M-Bus packet
-pub struct Packet<const N: usize = { phl::APL_MAX }> {
+pub struct Packet<const APL_MAX: usize = DEFAULT_APL_MAX> {
     pub rssi: Option<Rssi>,
     pub mode: Mode,
     pub phl: Option<phl::PhlFields>,
     pub dll: Option<dll::DllFields>,
     pub ell: Option<ell::EllFields>,
-    pub apl: Vec<u8, N>,
+    pub apl: Vec<u8, APL_MAX>,
 }
 
 pub type Rssi = i16;
@@ -150,6 +166,8 @@ impl<A: Layer> Stack<A> {
 
 #[cfg(test)]
 mod tests {
+    use crate::stack::phl::FrameMetadata;
+
     use super::*;
 
     #[test]
@@ -161,11 +179,13 @@ mod tests {
             0x86, 0x41, 0xce, 0x05, 0x26, 0x74, 0x7b, 0x1f, 0x09, 0x61, 0x17, 0x8c, 0xba, 0xf9,
             0xa8, 0x8e, 0x58, 0x71, 0x45, 0x72, 0xed, 0x55, 0xe8, 0xd4,
         ];
-        let (mode, skip, len) = phl::derive_frame_length(frame).unwrap();
-        assert_eq!(Mode::ModeCFFB, mode);
-        assert_eq!(2, skip);
-        assert_eq!(frame.len() - 2, len);
-        stack.read(frame, mode).unwrap();
-        stack.read(&frame[skip..], mode).unwrap();
+        let metadata = FrameMetadata::read(frame).unwrap();
+        assert_eq!(Mode::ModeCFFB, metadata.mode);
+        assert_eq!(2, metadata.frame_offset);
+        assert_eq!(frame.len() - 2, metadata.frame_length);
+        stack.read(frame, metadata.mode).unwrap();
+        stack
+            .read(&frame[metadata.frame_offset..], metadata.mode)
+            .unwrap();
     }
 }

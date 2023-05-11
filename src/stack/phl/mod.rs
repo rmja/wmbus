@@ -52,37 +52,81 @@ pub trait FrameFormat {
     fn trim_crc(buffer: &[u8]) -> Result<Vec<u8, { Self::DATA_MAX }>, Error>;
 }
 
-pub fn derive_frame_length(buffer: &[u8]) -> Result<(Mode, usize, usize), Error> {
-    if buffer.len() < DERIVE_FRAME_LENGTH_MIN {
-        return Err(Error::Incomplete);
+#[derive(Debug, PartialEq)]
+pub struct FrameMetadata {
+    pub mode: Mode,
+    pub frame_offset: usize,
+    pub frame_length: usize,
+}
+
+impl FrameMetadata {
+    pub fn read(buffer: &[u8]) -> Result<FrameMetadata, Error> {
+        if buffer.len() < DERIVE_FRAME_LENGTH_MIN {
+            return Err(Error::Incomplete);
+        }
+
+        if buffer[0] == 0x54 {
+            Self::decode_modec(buffer)
+        } else if buffer[1] == 0x44 {
+            // This is very likely a ModeC FFB frame where we have synchronized on the last 16 bits of its syncword 543D_543D.
+            // 0x44 is the SND-NR C-field within the frame
+
+            // We can however not be sure about this because 0x44 can map to valid 3oo6 symbols.
+            let first_is_3oo6 = (buffer[0] & 0xFC).count_ones() == 3;
+            let second_is_3oo6 = ((buffer[0] & 0x03) | (buffer[1] & 0xF0)).count_ones() == 3;
+
+            if first_is_3oo6 && second_is_3oo6 {
+                // We try and receive more bytes so that we have what corresponds to the possible entire first block of a 3oo6 ModeT frame
+                // If that block passes CRC then it is ModeT, otherwise we assume ModeC FFB
+
+                // The first block is 12 bytes including its CRC - it is 3oo6 encoded so we actually need 18 bytes to proceed
+                if let Some(result) = Self::try_decode_first_modet_block(buffer)? {
+                    return Ok(result);
+                }
+            }
+
+            // Invalid 3oo6 or invalid first block CRC
+            // Assume ModeC FFB
+
+            let frame_length = FFB::get_frame_length(buffer)?;
+            Ok(FrameMetadata {
+                mode: Mode::ModeCFFB,
+                frame_offset: 0,
+                frame_length,
+            })
+        } else {
+            Self::decode_modet(buffer)
+        }
     }
 
-    if buffer[0] == 0x54 {
-        // This is Mode C
-
+    fn decode_modec(buffer: &[u8]) -> Result<FrameMetadata, Error> {
+        if buffer.len() < 2 {
+            return Err(Error::Incomplete);
+        }
         match buffer[1] {
             // Frame format A
             0xCD => {
                 let frame_length = FFA::get_frame_length(&buffer[2..])?;
-                Ok((Mode::ModeCFFA, 2, frame_length))
+                Ok(FrameMetadata {
+                    mode: Mode::ModeCFFA,
+                    frame_offset: 2,
+                    frame_length,
+                })
             }
             // Frame format B
             0x3D => {
                 let frame_length = FFB::get_frame_length(&buffer[2..])?;
-                Ok((Mode::ModeCFFB, 2, frame_length))
+                Ok(FrameMetadata {
+                    mode: Mode::ModeCFFB,
+                    frame_offset: 2,
+                    frame_length,
+                })
             }
             _ => Err(Error::Syncword),
         }
-    } else if buffer[1] == 0x44 {
-        // This is very likely a ModeC FFB frame where we have synchronized on the last 16 bits of its syncword 543D_543D.
-        // 0x44 is the SND-NR C-field within the frame
+    }
 
-        // We can however not be sure about this because 0x44 can map to valid 3oo6 symbols.
-
-        // We try and receive more bytes so that we have what corresponds to the possible entire first block of a 3oo6 ModeT frame
-        // If that block passes CRC then it is ModeT, otherwise we assume ModeC FFB
-
-        // The first block is 12 bytes including its CRC - it is 3oo6 encoded so we actually need 18 bytes to proceed
+    fn try_decode_first_modet_block(buffer: &[u8]) -> Result<Option<FrameMetadata>, Error> {
         if buffer.len() < (12 * 6) / 4 {
             return Err(Error::Incomplete);
         }
@@ -96,23 +140,32 @@ pub fn derive_frame_length(buffer: &[u8]) -> Result<(Mode, usize, usize), Error>
 
             if is_valid_crc(&block) {
                 let frame_length = FFA::get_frame_length(buffer)?;
-                return Ok((Mode::ModeTMTO, 0, frame_length));
+                return Ok(Some(FrameMetadata {
+                    mode: Mode::ModeTMTO,
+                    frame_offset: 0,
+                    frame_length,
+                }));
             }
         }
 
-        // Invalid 3oo6 or invalid first block CRC
-        // Assume ModeC FFB
+        Ok(None)
+    }
 
-        let frame_length = FFB::get_frame_length(buffer)?;
-        Ok((Mode::ModeCFFB, 0, frame_length))
-    } else {
+    fn decode_modet(buffer: &[u8]) -> Result<FrameMetadata, Error> {
+        if buffer.len() < 3 {
+            return Err(Error::Incomplete);
+        }
         let mut l_field = [0; 12];
         let bits = buffer.view_bits();
         let decoded =
             ThreeOutOfSix::decode(&mut l_field, &bits[..12]).map_err(Error::ThreeOutOfSix)?;
         assert_eq!(1, decoded);
         let frame_length = FFA::get_frame_length(&l_field)?;
-        Ok((Mode::ModeTMTO, 0, frame_length))
+        Ok(FrameMetadata {
+            mode: Mode::ModeTMTO,
+            frame_offset: 0,
+            frame_length,
+        })
     }
 }
 
@@ -183,16 +236,34 @@ mod tests {
     #[test]
     fn can_derive_frame_length() {
         assert_eq!(
-            (Mode::ModeCFFB, 2, 1 + 0x4E),
-            derive_frame_length(&[0x54, 0x3D, 0x4E]).unwrap()
+            FrameMetadata {
+                mode: Mode::ModeCFFB,
+                frame_offset: 2,
+                frame_length: 1 + 0x4E
+            },
+            FrameMetadata::read(&[0x54, 0x3D, 0x4E]).unwrap()
+        );
+        assert_eq!(
+            FrameMetadata {
+                mode: Mode::ModeCFFB,
+                frame_offset: 0,
+                frame_length: 1 + 0x4E
+            },
+            // This is invalid 3oo6
+            FrameMetadata::read(&[0x4E, 0x44, 0x00]).unwrap()
         );
         assert_eq!(
             Err(Error::Incomplete),
-            derive_frame_length(&[0x4E, 0x44, 0x2D])
+            // This is valid 3oo6
+            FrameMetadata::read(&[0x4F, 0x44, 0x00])
         );
         assert_eq!(
-            (Mode::ModeCFFB, 0, 1 + 0x4E),
-            derive_frame_length(&[
+            FrameMetadata {
+                mode: Mode::ModeCFFB,
+                frame_offset: 0,
+                frame_length: 1 + 0x4E
+            },
+            FrameMetadata::read(&[
                 0x4E, 0x44, 0x2D, 0x2C, 0x98, 0x27, 0x04, 0x67, 0x30, 0x04, 0x91, 0x53, 0x7A, 0xA6,
                 0x10, 0x40, 0x25, 0x6D
             ])

@@ -1,6 +1,7 @@
 use super::{Layer, Packet, ReadError, WriteError, Writer};
 use crate::address::WMBusAddress;
 
+/// Extended Link Layer
 pub struct Ell<A: Layer> {
     above: A,
 }

@@ -4,6 +4,7 @@ use super::{Layer, Packet, ReadError, WriteError, Writer};
 
 const HEADER_LENGTH: usize = 10;
 
+/// Data-Link Layer
 pub struct Dll<A: Layer> {
     above: A,
 }

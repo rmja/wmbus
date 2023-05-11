@@ -84,15 +84,15 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
 
                     if frame.len.is_none() {
                         // Try and derive the frame length
-                        match phl::derive_frame_length(&frame.buffer[..frame.received]) {
-                            Ok((mode, skip, length)) => {
-                                let frame_len = skip + length;
+                        match phl::FrameMetadata::read(&frame.buffer[..frame.received]) {
+                            Ok(metadata) => {
+                                let receive_length = metadata.frame_offset + metadata.frame_length;
                                 self.transceiver
-                                    .accept(&mut token, frame_len)
+                                    .accept(&mut token, receive_length)
                                     .await
                                     .unwrap();
-                                frame.mode = Some(mode);
-                                frame.len = Some(frame_len);
+                                frame.mode = Some(metadata.mode);
+                                frame.len = Some(receive_length);
                                 frame.rssi = Some(self.transceiver.get_rssi().await.unwrap());
                             }
                             Err(phl::Error::Incomplete) => {
@@ -107,9 +107,9 @@ impl<Transceiver: traits::Transceiver> Controller<Transceiver> {
                     }
 
                     if let Some(frame_length) = frame.len && frame.received >= frame_length {
-                            // Frame is fully received
-                            yield frame;
-                            break;
+                        // Frame is fully received
+                        yield frame;
+                        break;
                     }
                 } else {
                     // Error while reading - restart the receiver

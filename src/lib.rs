@@ -1,10 +1,11 @@
 #![cfg_attr(not(test), no_std)]
-#![feature(generators)]
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
 #![feature(const_trait_impl)]
-#![feature(let_chains)]
+#![feature(generators)]
 #![feature(generic_const_exprs)]
+#![feature(int_roundings)]
+#![feature(let_chains)]
 
 #[macro_use]
 extern crate num_derive;
