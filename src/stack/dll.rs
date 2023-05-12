@@ -9,6 +9,7 @@ pub struct Dll<A: Layer> {
     above: A,
 }
 
+#[derive(Clone)]
 pub struct DllFields {
     pub control: u8,
     pub address: WMBusAddress,

@@ -38,6 +38,7 @@ impl<T: Layer> Layer for &T {
 }
 
 /// A Wireless M-Bus packet
+#[derive(Clone)]
 pub struct Packet<const APL_MAX: usize = DEFAULT_APL_MAX> {
     pub rssi: Option<Rssi>,
     pub mode: Mode,

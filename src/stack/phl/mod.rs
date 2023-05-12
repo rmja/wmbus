@@ -22,6 +22,7 @@ pub struct Phl<A: Layer> {
     above: A,
 }
 
+#[derive(Clone)]
 pub struct PhlFields;
 
 #[derive(Debug, PartialEq)]

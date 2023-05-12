@@ -6,7 +6,7 @@ pub struct Ell<A: Layer> {
     above: A,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum EllFields {
     Short {
         cc: u8,
