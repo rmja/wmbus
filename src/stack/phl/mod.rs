@@ -57,6 +57,7 @@ pub trait FrameFormat {
 pub struct FrameMetadata {
     pub mode: Mode,
     pub frame_offset: usize,
+    /// The total frame length including CRC's, but excluding 3oo6 encoding
     pub frame_length: usize,
 }
 
@@ -269,6 +270,15 @@ mod tests {
                 0x10, 0x40, 0x25, 0x6D
             ])
             .unwrap()
+        );
+        assert_eq!(
+            FrameMetadata {
+                mode: Mode::ModeTMTO,
+                frame_offset: 0,
+                frame_length: 10 + 2 + 6 + 2
+            },
+            // 0x5a971c = 0b010110_101001_011100_011100, i.e. 0b0000_1111_0100_0100, i.e. 0x0F44?
+            FrameMetadata::read(&[0x5a, 0x97, 0x1c]).unwrap()
         );
     }
 }

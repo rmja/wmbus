@@ -40,6 +40,7 @@ impl<T: Layer> Layer for &T {
 /// A Wireless M-Bus packet
 #[derive(Clone)]
 pub struct Packet<const APL_MAX: usize = DEFAULT_APL_MAX> {
+    pub frame_len: Option<usize>,
     pub rssi: Option<Rssi>,
     pub mode: Mode,
     pub phl: Option<phl::PhlFields>,
@@ -101,6 +102,7 @@ impl<const N: usize> Packet<N> {
     /// Create a new empty packet
     pub const fn new(mode: Mode) -> Self {
         Self {
+            frame_len: None,
             rssi: None,
             mode,
             phl: None,
@@ -113,6 +115,7 @@ impl<const N: usize> Packet<N> {
     /// Create a new packet with a given payload
     pub fn with_apl(mode: Mode, apl: [u8; N]) -> Self {
         Self {
+            frame_len: None,
             rssi: None,
             mode,
             phl: None,
@@ -151,6 +154,7 @@ impl<A: Layer> Stack<A> {
     /// Read a packet from a byte buffer
     pub fn read(&self, buffer: &[u8], mode: Mode) -> Result<Packet, ReadError> {
         let mut packet = Packet::new(mode);
+        packet.frame_len = Some(buffer.len());
         self.phl.read(&mut packet, buffer)?;
         Ok(packet)
     }
@@ -172,7 +176,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_read() {
+    fn can_read_modecffb() {
         let stack = Stack::default();
 
         let frame = &[
@@ -184,6 +188,25 @@ mod tests {
         assert_eq!(Mode::ModeCFFB, metadata.mode);
         assert_eq!(2, metadata.frame_offset);
         assert_eq!(frame.len() - 2, metadata.frame_length);
+        stack.read(frame, metadata.mode).unwrap();
+        stack
+            .read(&frame[metadata.frame_offset..], metadata.mode)
+            .unwrap();
+    }
+
+    #[test]
+    fn can_read_modetmto() {
+        let stack = Stack::default();
+
+        let frame = &[
+            0x5a, 0x97, 0x1c, 0x3b, 0x13, 0xb4, 0x4e, 0xc6, 0x5a, 0x2d, 0xc3, 0x4e, 0x58, 0xd2,
+            0xce, 0x6a, 0x9d, 0x29, 0x99, 0x65, 0x96, 0x58, 0xd5, 0x8e, 0x58, 0xb5, 0x9c, 0x4d,
+            0xa4, 0xec,
+        ];
+        let metadata = FrameMetadata::read(frame).unwrap();
+        assert_eq!(Mode::ModeTMTO, metadata.mode);
+        assert_eq!(0, metadata.frame_offset);
+        assert_eq!(20, metadata.frame_length);
         stack.read(frame, metadata.mode).unwrap();
         stack
             .read(&frame[metadata.frame_offset..], metadata.mode)
