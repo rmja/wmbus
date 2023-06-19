@@ -11,7 +11,7 @@ description = "Wireless M-Bus (EN13757) protocol"
 
 [features]
 alloc = []
-ctrl = ["embassy-time", "futures", "futures-async-stream"]
+ctrl = ["dep:embassy-time", "dep:futures", "dep:futures-async-stream"]
 
 [dependencies]
 bitvec = { version = "1", default-features = false }
