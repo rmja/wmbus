@@ -1,6 +1,8 @@
+use bytes::{BufMut, BytesMut};
+
 use crate::address::WMBusAddress;
 
-use super::{Layer, Packet, ReadError, WriteError, Writer};
+use super::{Layer, Packet, ReadError, WriteError};
 
 const HEADER_LENGTH: usize = 10;
 
@@ -54,9 +56,13 @@ impl<A: Layer> Layer for Dll<A> {
 
     fn write<const N: usize>(
         &self,
-        _writer: &mut impl Writer,
-        _packet: &Packet<N>,
+        writer: &mut BytesMut,
+        packet: &Packet<N>,
     ) -> Result<(), WriteError> {
-        todo!()
+        let fields = packet.dll.as_ref().unwrap();
+        writer.put_u8(fields.control);
+        writer.put_slice(&fields.address.get_bytes());
+        self.above.write(writer, packet)?;
+        Ok(())
     }
 }

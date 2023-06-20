@@ -1,4 +1,6 @@
-use super::{Layer, Packet, ReadError, WriteError, Writer};
+use bytes::BytesMut;
+
+use super::{Layer, Packet, ReadError, WriteError};
 use crate::address::WMBusAddress;
 
 /// Extended Link Layer
@@ -110,7 +112,7 @@ impl<A: Layer> Layer for Ell<A> {
 
     fn write<const N: usize>(
         &self,
-        _writer: &mut impl Writer,
+        _writer: &mut BytesMut,
         _packet: &Packet<N>,
     ) -> Result<(), WriteError> {
         todo!()

@@ -3,8 +3,8 @@ use super::Error;
 use super::FrameFormat;
 use heapless::Vec;
 
-const FIRST_BLOCK_DATA_LENGTH: usize = 1 + 1 + 2 + 6;
-const SECOND_BLOCK_MAX_DATA_LENGTH: usize = 1 + 115;
+pub const FIRST_BLOCK_DATA_LENGTH: usize = 1 + 1 + 2 + 6;
+pub const SECOND_BLOCK_MAX_DATA_LENGTH: usize = 1 + 115;
 const MIN_DATA_LENGTH: usize = FIRST_BLOCK_DATA_LENGTH + 1; // CI field must be present
 const MIN_FRAME_LENGTH: usize = MIN_DATA_LENGTH + 2;
 

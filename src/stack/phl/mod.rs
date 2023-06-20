@@ -2,6 +2,7 @@ mod ffa;
 mod ffb;
 
 use bitvec::prelude::*;
+use bytes::{BufMut, BytesMut};
 use crc::{Crc, CRC_16_EN_13757};
 use heapless::Vec;
 
@@ -9,7 +10,7 @@ use crate::modet::threeoutofsix::{self, ThreeOutOfSix};
 
 pub use self::{ffa::FFA, ffb::FFB};
 
-use super::{Layer, Mode, Packet, ReadError, WriteError, Writer};
+use super::{Layer, Mode, Packet, ReadError, WriteError};
 
 const CRC: Crc<u16> = Crc::<u16>::new(&CRC_16_EN_13757);
 
@@ -212,10 +213,47 @@ impl<A: Layer> Layer for Phl<A> {
 
     fn write<const N: usize>(
         &self,
-        _writer: &mut impl Writer,
-        _packet: &Packet<N>,
+        writer: &mut BytesMut,
+        packet: &Packet<N>,
     ) -> Result<(), WriteError> {
-        todo!()
+        let start = writer.len();
+        writer.put_u8(0x00);
+        self.above.write(writer, packet)?;
+        let len = writer.len() - start;
+
+        // Write L field
+        writer[start] = if len <= ffb::FIRST_BLOCK_DATA_LENGTH + ffb::SECOND_BLOCK_MAX_DATA_LENGTH {
+            len + 2 - 1
+        } else {
+            len + 2 + 2 - 1
+        } as u8;
+
+        let data = &writer[start..];
+
+        if len <= ffb::FIRST_BLOCK_DATA_LENGTH + ffb::SECOND_BLOCK_MAX_DATA_LENGTH {
+            let mut digest = CRC.digest();
+            digest.update(data);
+            let crc = digest.finalize();
+            writer.put_u16(crc);
+        } else {
+            // Move the optional block
+            let first_len = ffb::FIRST_BLOCK_DATA_LENGTH + ffb::SECOND_BLOCK_MAX_DATA_LENGTH;
+            writer.put_u16(0);
+            let written = writer.len();
+            writer.copy_within(start + first_len..written - 2, start + first_len + 2);
+
+            let first_block = &mut writer[start..start + first_len + 2];
+            let mut digest = CRC.digest();
+            digest.update(&first_block[..first_len]);
+            first_block[first_len..].copy_from_slice(&digest.finalize().to_be_bytes());
+
+            let second_data = &writer[start + first_len + 2..];
+            let mut digest = CRC.digest();
+            digest.update(second_data);
+            writer.put_u16(digest.finalize());
+        }
+
+        Ok(())
     }
 }
 

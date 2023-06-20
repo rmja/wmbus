@@ -1,4 +1,5 @@
-use super::{Layer, Packet, ReadError, WriteError, Writer};
+use super::{Layer, Packet, ReadError, WriteError};
+use bytes::{BufMut, BytesMut};
 use heapless::Vec;
 
 /// Application Layer
@@ -18,9 +19,10 @@ impl Layer for Apl {
 
     fn write<const N: usize>(
         &self,
-        writer: &mut impl Writer,
+        writer: &mut BytesMut,
         packet: &Packet<N>,
     ) -> Result<(), WriteError> {
-        writer.write(&packet.apl)
+        writer.put_slice(&packet.apl);
+        Ok(())
     }
 }

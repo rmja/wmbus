@@ -20,9 +20,6 @@ pub mod stack;
 #[cfg(feature = "defmt")]
 mod defmt_impl;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 pub use address::WMBusAddress;
 
 #[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
