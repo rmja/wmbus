@@ -12,7 +12,7 @@ pub struct WMBusAddress {
     pub device_type: u8,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum WMBusAddressError {
     SerialNumberBcd,
 }
@@ -274,5 +274,13 @@ pub mod tests {
         assert_eq!(51272902, address.serial_number.value::<u32>());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
+    }
+
+    #[test]
+    fn parse_error() {
+        assert_eq!(
+            Err(WMBusAddressError::SerialNumberBcd),
+            WMBusAddress::from_bytes([0xE4, 0x20, 0x00, 0xD0, 0x60, 0xC9, 0x00, 0x20])
+        );
     }
 }
