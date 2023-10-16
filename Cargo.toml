@@ -22,10 +22,10 @@ futures = { version = "0.3", default-features = false, optional = true }
 futures-async-stream = { version = "0.2", optional = true }
 heapless = "0.7"
 nobcd = "0.2"
-num-derive = "0.3"
+num-derive = "0.4"
 num-traits = { version = "0.2", default-features = false }
 
 [dev-dependencies]
-assert_hex = "0.2"
+assert_hex = "0.4"
 bitvec = "1"
 mockall = "0.11"
