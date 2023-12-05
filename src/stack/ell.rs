@@ -112,10 +112,14 @@ impl<A: Layer> Layer for Ell<A> {
 
     fn write<const N: usize>(
         &self,
-        _writer: &mut BytesMut,
-        _packet: &Packet<N>,
+        writer: &mut BytesMut,
+        packet: &Packet<N>,
     ) -> Result<(), WriteError> {
-        todo!()
+        if packet.ell.is_some() {
+            todo!()
+        }
+        self.above.write(writer, packet)?;
+        Ok(())
     }
 }
 

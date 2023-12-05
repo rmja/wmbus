@@ -217,7 +217,7 @@ impl<A: Layer> Layer for Phl<A> {
         packet: &Packet<N>,
     ) -> Result<(), WriteError> {
         let start = writer.len();
-        writer.put_u8(0x00);
+        writer.put_u8(0x00); // Dummy L field
         self.above.write(writer, packet)?;
         let len = writer.len() - start;
 
