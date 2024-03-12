@@ -1,4 +1,4 @@
-use core::{convert::TryInto, fmt::Display};
+use core::fmt::Display;
 
 use nobcd::{BcdError, BcdNumber};
 
