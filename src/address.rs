@@ -182,6 +182,10 @@ pub mod tests {
         assert_eq!(44818914, address.serial_number.value::<u32>());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
+        assert_eq!(
+            [0x24, 0x23, 0x14, 0x89, 0x81, 0x44, 0x20, 0x04],
+            address.get_bytes()
+        );
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x91, 0x56, 0x39, 0x48, 0x20, 0x0C]).unwrap();
@@ -241,6 +245,14 @@ pub mod tests {
         assert_eq!(09043547, address.serial_number.value::<u32>());
         assert_eq!(0x85, address.version);
         assert_eq!(DeviceType::Water, address.device_type().unwrap());
+        assert_ne!(
+            [0x24, 0x23, 0x85, 0x07, 0x47, 0x35, 0x04, 0x09],
+            address.get_bytes()
+        );
+        assert_eq!(
+            [0x24, 0x23, 0x47, 0x35, 0x04, 0x09, 0x85, 0x07],
+            address.get_bytes()
+        );
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x85, 0x07, 0x25, 0x56, 0x00, 0x11]).unwrap();

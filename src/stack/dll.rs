@@ -66,3 +66,47 @@ impl<A: Layer> Layer for Dll<A> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        stack::{apl::Apl, Mode, Packet},
+        DeviceType, ManufacturerCode,
+    };
+
+    use super::*;
+
+    #[test]
+    fn can_read_hyd_default() {
+        // Given
+        let mut packet: Packet = Packet::new(Mode::ModeTMTO);
+        let dll = Dll::new(Apl::new());
+        let buffer: [u8; 10] = [0x00, 0x00, 0x24, 0x23, 0x14, 0x89, 0x81, 0x44, 0x20, 0x04];
+
+        // When
+        dll.read(&mut packet, &buffer).unwrap();
+
+        // Then
+        assert_eq!(
+            WMBusAddress::new(ManufacturerCode::HYD, 44818914, 0x20, DeviceType::Heat),
+            packet.dll.unwrap().address
+        );
+    }
+
+    #[test]
+    fn can_read_hyd_reversed() {
+        // Given
+        let mut packet: Packet = Packet::new(Mode::ModeTMTO);
+        let dll = Dll::new(Apl::new());
+        let buffer: [u8; 10] = [0x00, 0x00, 0x24, 0x23, 0x85, 0x07, 0x47, 0x35, 0x04, 0x09];
+
+        // When
+        dll.read(&mut packet, &buffer).unwrap();
+
+        // Then
+        assert_eq!(
+            WMBusAddress::new(ManufacturerCode::HYD, 09043547, 0x85, DeviceType::Water),
+            packet.dll.unwrap().address
+        );
+    }
+}
