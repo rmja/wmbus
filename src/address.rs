@@ -121,8 +121,7 @@ fn get_layout(value: &[u8; 8]) -> FieldLayout {
             // Sharky 775
             if let Ok(serial_number) = parse_bcd_le(value[4..8].try_into().unwrap()) {
                 let serial_number: u32 = serial_number.value();
-                if (44000000..44818900).contains(&serial_number)
-                    || (44819000..48350000).contains(&serial_number)
+                if (44000000..48350000).contains(&serial_number)
                     || (51200000..51273000).contains(&serial_number)
                 {
                     return FieldLayout::Diehl;
@@ -132,11 +131,21 @@ fn get_layout(value: &[u8; 8]) -> FieldLayout {
             && (version == 0x2A || version == 0x2B || version == 0x2E || version == 0x2F)
         {
             return FieldLayout::Diehl;
-        } else if device_type == 0x06 && (version == 0x8B) {
+        } else if device_type == 0x06 && version == 0x8B {
+            return FieldLayout::Diehl;
+        } else if device_type == 0x07 && (version == 0x85 || version == 0x86 || version == 0x8B) {
             return FieldLayout::Diehl;
         } else if device_type == 0x0C && (version == 0x2E || version == 0x2F || version == 0x53) {
             return FieldLayout::Diehl;
         } else if device_type == 0x16 && version == 0x25 {
+            return FieldLayout::Diehl;
+        }
+    } else if manufacturer_code == ManufacturerCode::DME as u16 {
+        // These indexes are not correct according to the standard, but are used by Diehl
+        let version = value[2];
+        let device_type = value[3];
+
+        if device_type == 0x07 && version == 0x78 {
             return FieldLayout::Diehl;
         }
     }
@@ -175,6 +184,13 @@ pub mod tests {
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
 
         let address =
+            WMBusAddress::from_bytes([0x24, 0x23, 0x91, 0x56, 0x39, 0x48, 0x20, 0x0C]).unwrap();
+        assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
+        assert_eq!(48395691, address.serial_number.value::<u32>());
+        assert_eq!(0x20, address.version);
+        assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
+
+        let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x95, 0x27, 0x80, 0x49, 0x20, 0x0C]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
         assert_eq!(49802795, address.serial_number.value::<u32>());
@@ -187,6 +203,13 @@ pub mod tests {
         assert_eq!(49959159, address.serial_number.value::<u32>());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
+
+        let address =
+            WMBusAddress::from_bytes([0x24, 0x23, 0x93, 0x56, 0x13, 0x51, 0x20, 0x0C]).unwrap();
+        assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
+        assert_eq!(51135693, address.serial_number.value::<u32>());
+        assert_eq!(0x20, address.version);
+        assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
         let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x06, 0x34, 0x27, 0x51, 0x20, 0x04]).unwrap();
@@ -213,6 +236,20 @@ pub mod tests {
     #[test]
     pub fn parse_hydromenter_reversed() {
         let address =
+            WMBusAddress::from_bytes([0x24, 0x23, 0x85, 0x07, 0x47, 0x35, 0x04, 0x09]).unwrap();
+        assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
+        assert_eq!(09043547, address.serial_number.value::<u32>());
+        assert_eq!(0x85, address.version);
+        assert_eq!(DeviceType::Water, address.device_type().unwrap());
+
+        let address =
+            WMBusAddress::from_bytes([0x24, 0x23, 0x85, 0x07, 0x25, 0x56, 0x00, 0x11]).unwrap();
+        assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
+        assert_eq!(11005625, address.serial_number.value::<u32>());
+        assert_eq!(0x85, address.version);
+        assert_eq!(DeviceType::Water, address.device_type().unwrap());
+
+        let address =
             WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x0C, 0x31, 0x87, 0x81, 0x44]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
         assert_eq!(44818731, address.serial_number.value::<u32>());
@@ -220,16 +257,16 @@ pub mod tests {
         assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
         let address =
-            WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x0C, 0x70, 0x90, 0x81, 0x44]).unwrap();
+            WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x0C, 0x86, 0x88, 0x81, 0x44]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(44819070, address.serial_number.value::<u32>());
+        assert_eq!(44818886, address.serial_number.value::<u32>());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
         let address =
-            WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x0C, 0x86, 0x88, 0x81, 0x44]).unwrap();
+            WMBusAddress::from_bytes([0x24, 0x23, 0x20, 0x0C, 0x70, 0x90, 0x81, 0x44]).unwrap();
         assert_eq!(ManufacturerCode::HYD, address.manufacturer_code().unwrap());
-        assert_eq!(44818886, address.serial_number.value::<u32>());
+        assert_eq!(44819070, address.serial_number.value::<u32>());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::HeatInlet, address.device_type().unwrap());
 
@@ -274,6 +311,26 @@ pub mod tests {
         assert_eq!(51272902, address.serial_number.value::<u32>());
         assert_eq!(0x20, address.version);
         assert_eq!(DeviceType::Heat, address.device_type().unwrap());
+    }
+
+    #[test]
+    pub fn parse_diehl_default() {
+        let address =
+            WMBusAddress::from_bytes([0xA5, 0x11, 0x55, 0x07, 0x16, 0x75, 0x20, 0x04]).unwrap();
+        assert_eq!(ManufacturerCode::DME, address.manufacturer_code().unwrap());
+        assert_eq!(75160755, address.serial_number.value::<u32>());
+        assert_eq!(0x20, address.version);
+        assert_eq!(DeviceType::Heat, address.device_type().unwrap());
+    }
+
+    #[test]
+    pub fn parse_diehl_reversed() {
+        let address =
+            WMBusAddress::from_bytes([0xA5, 0x11, 0x78, 0x07, 0x79, 0x19, 0x48, 0x20]).unwrap();
+        assert_eq!(ManufacturerCode::DME, address.manufacturer_code().unwrap());
+        assert_eq!(20481979, address.serial_number.value::<u32>());
+        assert_eq!(0x78, address.version);
+        assert_eq!(DeviceType::Water, address.device_type().unwrap());
     }
 
     #[test]
