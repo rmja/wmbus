@@ -4,8 +4,6 @@
 #![feature(const_trait_impl)]
 #![feature(coroutines)]
 #![feature(generic_const_exprs)]
-#![feature(int_roundings)]
-#![feature(let_chains)]
 
 #[macro_use]
 extern crate num_derive;

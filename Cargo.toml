@@ -28,4 +28,5 @@ num-traits = { version = "0.2", default-features = false }
 [dev-dependencies]
 assert_hex = "0.4"
 bitvec = "1"
+embassy-time = { version = "0.3", features = ["std", "generic-queue"] }
 mockall = "0.12"

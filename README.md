@@ -9,7 +9,7 @@ Add the crate to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-linkiq = { git = "https://github.com/rmja/wmbus" }
+wmbus = { git = "https://github.com/rmja/wmbus" }
 ```
 
 ## References
