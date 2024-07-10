@@ -130,19 +130,20 @@ impl FrameMetadata {
     }
 
     fn try_decode_first_modet_block(buffer: &[u8]) -> Result<Option<FrameMetadata>, Error> {
+        // The first block is 12 bytes - it is 3oo6 encoded so we actually need to received 18 bytes.
         if buffer.len() < (12 * 6) / 4 {
             return Err(Error::Incomplete);
         }
 
         let mut block = [0; 12];
         let bits = buffer.view_bits();
-        if let Ok(decoded) = ThreeOutOfSix::decode(&mut block, &bits[..12 * 6]) {
+        if let Ok(decoded) = ThreeOutOfSix::decode(&mut block, &bits[..12 * 6 * 2]) {
             // It seems as if the first block was in fact 3oo6 encoded
 
             assert_eq!(12, decoded);
 
             if is_valid_crc(&block) {
-                let frame_length = FFA::get_frame_length(buffer)?;
+                let frame_length = FFA::get_frame_length(&block)?;
                 return Ok(Some(FrameMetadata {
                     mode: Mode::ModeTMTO,
                     frame_offset: 0,
@@ -309,14 +310,45 @@ mod tests {
             ])
             .unwrap()
         );
+
+        // 0x5a971c = 0b010110_101001_011100_011100, i.e. 0b0000_1111_0100_0100, i.e. 0x0F44?
         assert_eq!(
             FrameMetadata {
                 mode: Mode::ModeTMTO,
                 frame_offset: 0,
                 frame_length: 10 + 2 + 6 + 2
             },
-            // 0x5a971c = 0b010110_101001_011100_011100, i.e. 0b0000_1111_0100_0100, i.e. 0x0F44?
             FrameMetadata::read(&[0x5a, 0x97, 0x1c]).unwrap()
+        );
+
+        // 0x5b44dc = 0b010110_110100_010011_011100, i.e. 0b0000_1100_0111_0100, i.e. 0x0C74?
+        assert_eq!(
+            Err(Error::Incomplete),
+            FrameMetadata::read(&[0x5b, 0x44, 0xdc])
+        );
+        assert_eq!(
+            Err(Error::Incomplete),
+            FrameMetadata::read(&[
+                0x5b, 0x44, 0xdc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00
+            ])
+        );
+
+        let mut digest = CRC.digest();
+        digest.update(&[0x0C, 0x74, 0x0C, 0x74, 0x0C, 0x74, 0x0C, 0x74, 0x0C, 0x74]);
+        assert_eq!(0x64E5, digest.finalize());
+        // 0x69CC99 = 0b011010_011100_110010_011001, i.e. 0b0110_0100_1110_0101, i.e. 0x64E5?
+        assert_eq!(
+            FrameMetadata {
+                mode: Mode::ModeTMTO,
+                frame_offset: 0,
+                frame_length: 10 + 2 + 3 + 2
+            },
+            FrameMetadata::read(&[
+                0x5b, 0x44, 0xdc, 0x5b, 0x44, 0xdc, 0x5b, 0x44, 0xdc, 0x5b, 0x44, 0xdc, 0x5b, 0x44,
+                0xdc, 0x69, 0xcc, 0x99
+            ])
+            .unwrap()
         );
     }
 }
