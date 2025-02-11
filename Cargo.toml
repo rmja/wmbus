@@ -17,7 +17,7 @@ bitvec = { version = "1", default-features = false }
 bytes = { version = "1.4", default-features = false }
 crc = "3"
 defmt = { version = "0.3", optional = true }
-embassy-time = { version = "0.3", optional = true }
+embassy-time = { version = "0.4", optional = true }
 futures = { version = "0.3", default-features = false, optional = true }
 futures-async-stream = { version = "0.2", optional = true }
 heapless = "0.8"
@@ -28,5 +28,5 @@ num-traits = { version = "0.2", default-features = false }
 [dev-dependencies]
 assert_hex = "0.4"
 bitvec = "1"
-embassy-time = { version = "0.3", features = ["std", "generic-queue"] }
-mockall = "0.12"
+embassy-time = { version = "0.4", features = ["std", "generic-queue-64"] }
+mockall = "0.13"
